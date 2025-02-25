@@ -353,14 +353,19 @@ groups:
   - job_name: 'blackbox'
     scrape_interval: 10s
     metrics_path: /probe
+    params:
+      module: 
+        - http_2xx
+        - http_4xx
+        - http200igssl
     file_sd_configs:
       - files:
           - '/etc/prometheus/blackbox/targets/blackbox_exporter-http*.yml'
     relabel_configs:
       - source_labels: [__address__]
         target_label: __param_target
-      - source_labels: [module]         # 将 blackbox_exporter-http*.yml 文件中的 `module`标签修改为 `__param_module`
-        target_label: __param_module
+      - source_labels: [__param_module]  # `__param_module`标签修改为`module`
+        target_label: module
       - source_labels: [__param_target]
         target_label: instance
       - target_label: __address__
@@ -373,16 +378,17 @@ groups:
 ```yaml
 # Blackbox.yml
 modules:
-  https_2xx:
+  https_2xx:          # >> https 模块
     prober: http
     timeout: 5s
     http:
-      method: GET
+      valid_status_codes: [200,204]
       no_follow_redirects: false
       fail_if_ssl: false
       fail_if_not_ssl: true
       preferred_ip_protocol: "ipv4"
-  http_2xx:
+
+  http_2xx:            # >> http 模块
     prober: http
     timeout: 5s
     http:
@@ -391,6 +397,20 @@ modules:
       fail_if_ssl: true
       fail_if_not_ssl: false
       preferred_ip_protocol: "ipv4"
+
+  http200igssl:
+    prober: http
+    http:
+      valid_status_codes: [200,204]
+      tls_config:
+        insecure_skip_verify: true
+      preferred_ip_protocol: "ip4"
+
+  http_4xx:
+    prober: http
+    http:
+      valid_status_codes: [400,401,403,404]
+      preferred_ip_protocol: "ip4"
 ```
 
 3）最终的targets文件配置。这些是黑匣子导出器将监视的站点的实际列表。
@@ -400,12 +420,16 @@ modules:
 - labels:
     module: https_2xx         # https, 对应 prometheus.yml文件中 relabel_configs配置块中的 source_labels: [module]
   targets:
-  - https://www.google.com
- 
+  - https://www.google.com 
+
 - labels:
     module: http_2xx          # http
   targets:
   - http://www.baidu.com/
+- labels:
+    module: http_4xx          # http_4xx
+  targets:
+  - http://www.xxx.com/
 ```
 
 # 未完待续
