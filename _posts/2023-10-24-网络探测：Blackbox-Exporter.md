@@ -343,6 +343,8 @@ groups:
 
 # 使用单个 Job 访问多个模块和目标
 
+多目标导出器（例如 snmp_exporter、blackbox_exporter）可以通过 [scrape 配置](https://github.com/prometheus/snmp_exporter#prometheus-configuration)将一组动态目标传递给它们。
+
 以 http、https 模块为例
 
 1） 将 Blackbox Exporter job添加到`prometheus.yml`文件中：
@@ -436,3 +438,4 @@ modules:
 ```
 
 # 
+
