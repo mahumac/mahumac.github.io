@@ -327,29 +327,51 @@ modules:
   # SNMPv2-MIB::sysUpTime, 1.3.6.1.2.1.1.3 , 启动以来运行的时间，单位为百分之一秒。 这意味着此值不等于系统正常运行时间，但等于 snmp 进程正常运行时间。（rfc3418）
   SNMPv2-MIB:
     walk:
-      - "SNMPv2-MIB::system"    # .1.3.6.1.2.1.1 , [sysName, sysDescr, sysUpTime, sysLocation],etc
+      - "SNMPv2-MIB::system"    # .1.3.6.1.2.1.1 , [sysName, sysDescr, sysUpTime, sysLocation, sysContact],etc
 
   # Default IF-MIB interfaces table with ifIndex.
   IF-MIB:
-    walk:                           # [interfaces, ifXTable]
-      - IF-MIB::interfaces          # 1.3.6.1.2.1.2.2 , 32位计数器，该表包含各接口表项, 采集间隔必须大于5s。该表的索引是ifIndex.(等同于IF-MIB::ifTable)
-      - IF-MIB::ifXTable            # 1.3.6.1.2.1.31.1.1 , 64位计数器，该表是ifTable的补充, 采集间隔必须大于5s。该表的索引是ifIndex
-      
-    max_repetitions: 50   # 使用GET/GETBULK,一次可以请求的最大objects,默认为25
-    retries: 2
-    timeout: 5s
+    walk:
+      # 如果设备接口数量太多，遍历整个ifTable需要花费较长时间(超过1分钟)，建议只采集需要的项目。
+      # IF-MIB::ifTable    # 1.3.6.1.2.1.2.2 , 32位计数器，该表包含各接口表项, 采集间隔必须大于5s。该表的索引是ifIndex
+      - ifIndex                 # 1.3.6.1.2.1.2.2.1.1
+      - ifDescr                 # 1.3.6.1.2.1.2.2.1.2
+      - ifType                  # 1.3.6.1.2.1.2.2.1.3
+      - ifMtu                   # 1.3.6.1.2.1.2.2.1.4
+      - ifAdminStatus           # 1.3.6.1.2.1.2.2.1.7
+      - ifOperStatus            # 1.3.6.1.2.1.2.2.1.8
+      - ifInDiscards            # 1.3.6.1.2.1.2.2.1.13
+      - ifInErrors              # 1.3.6.1.2.1.2.2.1.14
+      - ifOutDiscards           # 1.3.6.1.2.1.2.2.1.19
+      - ifOutErrors             # 1.3.6.1.2.1.2.2.1.20
 
-    lookups:
+      # IF-MIB::ifXTable    # 1.3.6.1.2.1.31.1.1 , 64位计数器，该表是ifTable的补充, 采集间隔必须大于5s。该表的索引是ifIndex
+      - ifName                  # 1.3.6.1.2.1.31.1.1.1.1,   接口名称
+      - ifHCInMulticastPkts     # 1.3.6.1.2.1.31.1.1.1.8,   接收的组播报文个数，64bit
+      - ifHCInBroadcastPkts     # 1.3.6.1.2.1.31.1.1.1.9,   接收的广播报文个数, 64bit
+      - ifHCOutMulticastPkts    # 1.3.6.1.2.1.31.1.1.1.12,  发送的组播报文个数，包括被丢弃的报文或没有送出的报文
+      - ifHCOutBroadcastPkts    # 1.3.6.1.2.1.31.1.1.1.13,  发送的广播报文个数，包括被丢弃的报文或没有送出的报文
+      - ifHCInOctets            # 1.3.6.1.2.1.31.1.1.1.6,   接口上接收到的字节总数，包括成帧字符。
+      - ifHCOutOctets           # 1.3.6.1.2.1.31.1.1.1.10,  接口上发送出的字节总数，包括成帧字符。
+      - ifHighSpeed             # 1.3.6.1.2.1.31.1.1.1.15,  接口当前带宽,单位为1,000,000 bit/s
+      - ifAlias                 # 1.3.6.1.2.1.31.1.1.1.18,  由网络管理员指定的接口别名/备注
+    
+    # 使用GET/GETBULK,一次可以请求的最大objects,值为60时，一个snmp resposne udp包有可能 >1500byte,不建议过大。默认为25。  
+    max_repetitions: 50
+    retries: 2
+    timeout: 5s    # 每个SNMP request的超时时间, defaults to 5s.
+
+    lookups:       # 针对Table类型的 OID 做标签‘插入/修改’操作
       - source_indexes: [ifIndex]
         lookup: IF-MIB::ifAlias             # 1.3.6.1.2.1.31.1.1.1.18   接口自定义描述信息
-        drop_source_indexes: false          # 如果为 true，则删除此查找的source index labels。需要确保索引唯一
+        drop_source_indexes: false          # 如果为 true，则删除此查找的source_index labels。需要确保索引唯一
       - source_indexes: [ifIndex]
         lookup: IF-MIB::ifDescr             # 1.3.6.1.2.1.2.2.1.2       接口名称描述
       - source_indexes: [ifIndex]
         lookup: IF-MIB::ifName              # 1.3.6.1.2.1.31.1.1.1.1    接口名称
     overrides:
       ifAlias:
-        ignore: true # if ture:从输出结果删除该行metric（序列）。在输出中不再暴露该指标信息，而是以标签的形式存在索引表的指标中。
+        ignore: true # 该OID对象不会生成单独的metric, 而是作为标签插入到metric中。目的是易于人类阅读，也减少数据库中的metric数量。
       ifDescr:
         ignore: true
       ifName:
@@ -383,22 +405,24 @@ modules:
       - HUAWEI-ENTITY-EXTENT-MIB::hwEntityTemperature   # 1.3.6.1.4.1.2011.5.25.31.1.1.1.1.11 实体温度，单位°C
       - HUAWEI-ENTITY-EXTENT-MIB::hwEntityMemSizeMega   # 1.3.6.1.4.1.2011.5.25.31.1.1.1.1.19 实体内存大小，单位是MB
       - HUAWEI-ENTITY-EXTENT-MIB::hwEntityOperStatus    # 1.3.6.1.4.1.2011.5.25.31.1.1.1.1.2  实体的当前操作状态
-            # 1：notSupported：表示该实体不可用 2：disabled：表示该实体处于未使能状态 3：enabled：表示该实体处于使能状态   4：offline：表示该实体未用 
-            # 15：protocollUp：表示该实体协议Up    16：linkUp：表示该实体Up   17：linkDown：表示该实体Down
+             # 1：notSupported：实体不可用   2：disabled：实体处于未使能状态 
+             # 3：enabled：实体处于使能状态   4：offline：该实体未用 
+             # 15：protocollUp：实体协议Up  16：linkUp：该实体Up 17：linkDown：实体Down
+
+      ## hwRUModuleInfoTable
+      # 该表是描述一些生产信息，其中包括，BOM ID，BOM的英文描述和本地描述，生产制造码和更新日志等信息。（暂时忽略）
+      # - HUAWEI-ENTITY-EXTENT-MIB::hwRUModuleInfoTable        # 1.3.6.1.4.1.2011.5.25.31.1.1.2
 
       ## hwOpticalModuleInfoTable
-      # 该表是描述一些生产信息，其中包括，BOM ID，BOM的英文描述和本地描述，生产制造码和更新日志等信息。。该表的索引是`ENTITY-MIB::entPhysicalIndex`
-      # - hwOpticalModuleInfoTable
+      # 该表描述了光模块一些基本信息，其中包括光模块模式、波长、传输距离、接收光功率、发送光功率等信息。
+      - HUAWEI-ENTITY-EXTENT-MIB::hwOpticalModuleInfoTable     # 1.3.6.1.4.1.2011.5.25.31.1.1.3
 
-      ## 该表描述了光模块一些基本信息，其中包括光模块模式、波长、传输距离、接收光功率、发送光功率等信息。该MIB信息存储在光模块上的寄存器中。该表的索引是`ENTITY-MIB::entPhysicalIndex`
-      - HUAWEI-ENTITY-EXTENT-MIB::hwOpticalModuleInfoTable    # 1.3.6.1.4.1.2011.5.25.31.1.1.3
-
-      # hwFanStatusTable
-      # 该表用于查询风扇信息。该表的索引是hwEntityFanSlot、hwEntityFanSn。
-      - HUAWEI-ENTITY-EXTENT-MIB::hwFanStatusTable            # 1.3.6.1.4.1.2011.5.25.31.1.1.10 hwFanStatusTable, 查询风扇信，槽位、状态、转速等
+      ## hwFanStatusTable
+      # 该表用于查询风扇信息。该表的索引是 hwEntityFanSlot、hwEntityFanSn。
+      - HUAWEI-ENTITY-EXTENT-MIB::hwFanStatusTable   # 1.3.6.1.4.1.2011.5.25.31.1.1.10, 风扇信，槽位、状态、转速等
 
       # hwPwrStatusTable
-      # 该表用于查询电源信息。该表的索引是hwEntityPwrSlot、hwEntityPwrSn。
+      # 该表用于查询电源信息。该表的索引是 hwEntityPwrSlot、hwEntityPwrSn。
       - HUAWEI-ENTITY-EXTENT-MIB::hwEntityPwrSlot        # 1.3.6.1.4.1.2011.5.25.31.1.1.18.1.1 , 电源的槽位号
       - HUAWEI-ENTITY-EXTENT-MIB::hwEntityPwrState       # 1.3.6.1.4.1.2011.5.25.31.1.1.18.1.6 , 电源的状态
       - HUAWEI-ENTITY-EXTENT-MIB::hwEntityPwrCurrent     # 1.3.6.1.4.1.2011.5.25.31.1.1.18.1.7 , 电源的电流，单位：mA
@@ -407,8 +431,8 @@ modules:
       - HUAWEI-ENTITY-EXTENT-MIB::hwDevicePowerInfoUsedPower  # 1.3.6.1.4.1.2011.5.25.31.3.2 , 系统当前使用的功率。
 
     lookups:
-      - source_indexes: [entPhysicalIndex]                  # 根据索引`ENTITY-MIB::entPhysicalIndex`，查找`ENTITY-MIB::entPhysicalName`,
-        lookup: ENTITY-MIB::entPhysicalName                 # 并将`entPhysicalName`作为标签，使 metrics 易于人类阅读
+      - source_indexes: [entPhysicalIndex]          # 根据索引`ENTITY-MIB::entPhysicalIndex`，查找`ENTITY-MIB::entPhysicalName`,
+        lookup: ENTITY-MIB::entPhysicalName         # 并将`entPhysicalName`作为标签，使 metrics 易于人类阅读
       - source_indexes: [hwEntityFanSlot, hwEntityFanSn]
         lookup: HUAWEI-ENTITY-EXTENT-MIB::hwEntityFanPresent
       - source_indexes: [hwEntityFanSlot, hwEntityFanSn]
@@ -425,7 +449,7 @@ modules:
 
   HUAWEI-FLASH-MAN-MIB:
     walk: 
-      - hwStorageSpace      # 1.3.6.1.4.1.2011.6.9.1.4.2.1.3 , HUAWEI-FLASH-MAN-MIB::hwStorageSpace    Flash设备空间的大小 单位是千字节
+      - hwStorageSpace      # 1.3.6.1.4.1.2011.6.9.1.4.2.1.3 , Flash设备空间的大小 单位是千字节
       - hwStorageSpaceFree  # 1.3.6.1.4.1.2011.6.9.1.4.2.1.4 , Flash设备剩余空间 单位是千字节
       - hwStorageName       # 1.3.6.1.4.1.2011.6.9.1.4.2.1.5 , Flash设备名称
 
@@ -471,7 +495,8 @@ systemctl restart snmp_exporter.service
 
 - 配合 `--snmp.module-concurrency=3 `参数，提高并发性，可以在一次抓取中从多个模块中检索信息
 - 根据需要，每个module的采集周期可以设置不一样。例如接口信息，可以一分钟收集一次。光模块信息可以5分钟收集一次
-- 根据不同型号、不同厂家的设备、设备性能来对应不同的module ，拆分为多个job
+- 根据不同型号、不同厂家的设备、设备性能来对应不同的module ，拆分为多个配置文件 或 job
+- 根据设备 或者 module的采集时间不同，拆分为多个配置文件 或 job
 
 ```yaml
 scrape_configs:
@@ -482,18 +507,15 @@ scrape_configs:
       - files: ["/etc/prometheus/file_sd_config.d/snmp-*.yml"]
         refresh_interval: 1m
     metrics_path: /snmp
-    params:
-      auth: [public_v2]
-      module: ["IF-MIB","IF-MIB","HUAWEI-DEVICE-MIB"]   # 注意module必须存在，且名称正确（generator.yml中的module）
     relabel_configs:
       - source_labels: ["__address__"]
         target_label: __param_target
       - source_labels: ["__param_target"]
         target_label: instance
-      - source_labels: ["__param_module"]
-        target_label: module
+      - source_labels: ["module"]
+        target_label: __param_module
       - target_label: __address__
-        replacement: 127.0.0.19:9116        # snmp_exporter 服务IP和端口
+        replacement: 127.0.0.19:9116        # snmp_exporter服务IP和端口
 
   - job_name: "snmp-2"
     scrape_interval: 5m
@@ -502,52 +524,46 @@ scrape_configs:
       - files: ["/etc/prometheus/file_sd_config.d/snmp-*.yml"]
         refresh_interval: 1m
     metrics_path: /snmp
-    params:
-      auth: [public_v2]
-      module: ["HUAWEI-ENTITY-EXTENT-MIB","HUAWEI-FLASH-MAN-MIB"]
     relabel_configs:
       - source_labels: ["__address__"]
         target_label: __param_target
       - source_labels: ["__param_target"]
         target_label: instance
-      - source_labels: ["__param_module"]
-        target_label: module
+      - source_labels: ["module"]
+        target_label: __param_module
       - target_label: __address__
-        replacement: 127.0.0.1:9116        # snmp_exporter 服务IP和端口
-
-  - job_name: "snmp-3"
-    scrape_interval: 5m
-    scrape_timeout: 5m
-    file_sd_configs:
-      - files: ["/etc/prometheus/file_sd_config.d/snmp-*.yml"]
-        refresh_interval: 1m
-    metrics_path: /snmp
-    params:
-      auth: [public_v2]
-      module: ["IP-MIB"]
-    relabel_configs:
-      - source_labels: ["__address__"]
-        target_label: __param_target
-      - source_labels: ["__param_target"]
-        target_label: instance
-      - source_labels: ["__param_module"]
-        target_label: module
-      - target_label: __address__
-        replacement: 127.0.0.1:9116        # snmp_exporter 服务IP和端口
-
+        replacement: 127.0.0.1:9116        # snmp_exporter服务IP和端口
 ```
 
-新建 `/etc/prometheus/file_sd_config.d/snmp-huawei.yml`文件，添加需要收集snmp信息的设备
+新建 `/etc/prometheus/file_sd_config.d/snmp-1m-huawei.yml`文件，对应Prometheus中的1分钟轮询 Job，添加需要收集snmp信息的设备
 
 ```yaml
+# 1分钟轮询的模块,注意`module`不能写成数组格式
 - labels:
-    model: CE8800
+    auth: "public_v2"
+    model: "CE8800"
+    region: "BJ"
+    module: "IF-MIB,SNMPv2-MIB"  # 名称对应generator.yml中的module名称
   targets:
-    # target 这里指网络设备管理IP
     - 192.168.1.1
     - 10.10.1.1
-
 ```
+
+新建 `/etc/prometheus/file_sd_config.d/snmp-5m-huawei.yml`文件，对应Prometheus中的5分钟轮询 Job，添加需要收集snmp信息的设备
+
+```yaml
+# 5分钟轮询的模块,注意`module`不能写成数组格式
+- labels:
+    auth: "public_v2"
+    model: "CE8800"
+    region: "BJ"
+    module: "HUAWEI-ENTITY-EXTENT-MIB,HUAWEI-FLASH-MAN-MIB" # 名称对应generator.yml中的module名称
+  targets:
+    - 192.168.1.1
+    - 10.10.1.1
+```
+
+
 
 ## 性能查看
 
