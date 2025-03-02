@@ -364,12 +364,14 @@ groups:
     relabel_configs:
       - source_labels: [__address__]
         target_label: __param_target
-      - source_labels: [__param_module]  # `__param_module`标签修改为`module`
+      - source_labels: [__param_module]  # 将 blackbox_exporter-http*.yml 文件中的 `module`标签传递为 `__param_module`
         target_label: module
       - source_labels: [__param_target]
         target_label: instance
       - target_label: __address__
-        replacement: 127.0.0.1:9115     # blackbox exporter
+        replacement: 127.0.0.1:9115     # blackbox exporter的IP和端口
+      - target_label: prober            # 自定义标签
+        replacement: prober-01
  # End Blackbox Exporter
 ```
 
@@ -418,18 +420,19 @@ modules:
 ```yaml
 # nano /etc/prometheus/blackbox/targets/*.yml
 - labels:
-    module: https_2xx         # https, 对应 prometheus.yml文件中 relabel_configs配置块中的 source_labels: [module]
+    module: [https_2xx,http_4xx]    # 需要采集的指标.对应 prometheus.yml文件中 relabel_configs配置块中的 target_labels: module
   targets:
-  - https://www.google.com 
-
+  - https://www.google.com
+ 
 - labels:
-    module: http_2xx          # http
+    module: [http_xx,http_4xx]     # http
   targets:
   - http://www.baidu.com/
+  
 - labels:
     module: http_4xx          # http_4xx
   targets:
   - http://www.xxx.com/
 ```
 
-# 未完待续
+# 
