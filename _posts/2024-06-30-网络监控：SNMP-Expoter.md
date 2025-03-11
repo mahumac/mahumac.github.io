@@ -331,21 +331,22 @@ auths:
 
 modules:
   # SNMPv2-MIB 系统基础信息，例如： sysName, sysDescr, sysUpTime, sysLocation, etc.
-  # SNMPv2-MIB::sysUpTime, 1.3.6.1.2.1.1.3 , 启动以来运行的时间，单位为百分之一秒。 这意味着此值不等于系统正常运行时间，但等于 snmp 进程正常运行时间。（rfc3418）
+  # SNMPv2-MIB::sysUpTime, 1.3.6.1.2.1.1.3 , 启动以来运行的时间，32位计数器，单位为百分之一秒。 每496天会发生重置，不等于系统正常运行时间，
   SNMPv2-MIB:
     walk:
       - "SNMPv2-MIB::system"    # .1.3.6.1.2.1.1 , [sysName, sysDescr, sysUpTime, sysLocation, sysContact],etc
+      - "SNMP-FRAMEWORK-MIB::snmpEngineTime"    # 1.3.6.1.6.3.10.2.1.3, 运行时间，单位是秒。可以替代`SNMPv2-MIB::sysUpTime`
 
   # Default IF-MIB interfaces table with ifIndex.
   IF-MIB:
     walk:
-      # 如果设备接口数量太多，遍历整个ifTable需要花费较长时间(超过1分钟)，建议只采集需要的项目。
-      # IF-MIB::ifTable    # 1.3.6.1.2.1.2.2 , 32位计数器，该表包含各接口表项, 采集间隔必须大于5s。该表的索引是ifIndex
+      # 如果设备接口数量太多，遍历整个ifTable需要花费较长时间(超过1分钟)，建议只采集需要的项目 / 或者拆分为多个module去采集。
+      # IF-MIB::ifTable     # 1.3.6.1.2.1.2.2 , 32位计数器， 采集间隔必须大于5s。该表的索引是ifIndex.
       - ifIndex                 # 1.3.6.1.2.1.2.2.1.1
-      #- ifDescr                 # 1.3.6.1.2.1.2.2.1.2
+      - ifDescr                 # 1.3.6.1.2.1.2.2.1.2
       #- ifType                  # 1.3.6.1.2.1.2.2.1.3
       - ifMtu                   # 1.3.6.1.2.1.2.2.1.4
-      #- ifAdminStatus           # 1.3.6.1.2.1.2.2.1.7
+      - ifAdminStatus           # 1.3.6.1.2.1.2.2.1.7
       - ifOperStatus            # 1.3.6.1.2.1.2.2.1.8
       - ifInDiscards            # 1.3.6.1.2.1.2.2.1.13
       - ifInErrors              # 1.3.6.1.2.1.2.2.1.14
@@ -362,43 +363,120 @@ modules:
       - ifHCOutOctets           # 1.3.6.1.2.1.31.1.1.1.10,  接口上发送出的字节总数，包括成帧字符。
       - ifHighSpeed             # 1.3.6.1.2.1.31.1.1.1.15,  接口当前带宽,单位为1,000,000 bit/s
       - ifAlias                 # 1.3.6.1.2.1.31.1.1.1.18,  由网络管理员指定的接口别名/备注
-    
-    # 使用GET/GETBULK,一次可以请求的最大objects,值为60时，一个snmp resposne udp包有可能 >1500byte,不建议过大。默认为25。  
-    max_repetitions: 50
-    retries: 2
-    timeout: 5s    # 每个SNMP request的超时时间, defaults to 5s.
 
-    lookups:       # 针对Table类型的 OID 做标签‘插入/修改’操作
+    max_repetitions: 50   # 使用GET/GETBULK,一次可以请求的最大objects。值为60时，一个snmp resposne udp包有可能 >1500byte,不建议过大。默认为25。
+    retries: 3
+    timeout: 5s           # 每个SNMP request的超时时间, defaults to 5s.
+
+    lookups:    # 针对Table类型的 OID 做标签‘插入/修改’操作
       - source_indexes: [ifIndex]
         lookup: IF-MIB::ifAlias             # 1.3.6.1.2.1.31.1.1.1.18   接口自定义描述信息
-        drop_source_indexes: false          # 如果为 true，则删除此查找的source_index labels。需要确保索引唯一
+        drop_source_indexes: false          # 如果为 true，则从metric中删除此查找的source_index labels。需要确保索引唯一
       - source_indexes: [ifIndex]
         lookup: IF-MIB::ifName              # 1.3.6.1.2.1.31.1.1.1.1    接口名称
+      - source_indexes: [ifIndex]
+        lookup: IF-MIB::ifDescr             # 1.3.6.1.2.1.31.1.1.1.2
+      - source_indexes: [ifIndex]
+        lookup: IF-MIB::ifAdminStatus 
+      - source_indexes: [ifIndex]
+        lookup: IF-MIB::ifOperStatus
+
     overrides:
       ifAlias:
-        ignore: true # 该OID对象不会生成单独的metric, 而是作为标签插入到metric中。目的是易于人类阅读，也减少数据库中的metric数量。
+        ignore: true    # if ture: 意思是该OID对象不会生成单独的metric, 而是作为标签插入到metric中。目的是易于人类阅读，也减少数据库中的metric数量。
+      ifName:
+        ignore: false   # 保留ifName的metric
       ifDescr:
         ignore: true
-      ifName:
-        ignore: false
+      ifAdminStatus:
+        ignore: true
+      ifOperStatus:
+        ignore: true
       #ifType:
-      #  ignore: true
-      #  type: EnumAsInfo
+      # type: EnumAsInfo
+
     filters:
+      # 根据接口当前状态收集接口指标，过滤器目前仅仅支持oid ,不支持 oid name。可以减少snmpwalk/get请求数量
       # static:
       #   - targets:
       #     - ifIndex
       #     indices: ["2","3","4"]
-      # 根据接口当前状态收集接口指标，过滤器目前仅仅支持oid ,不支持 oid name
-      dynamic:                      # 动态过滤器 常用于为 ifAlias、ifSpeed 或 ifAdminStatus 状态中具有特定名称的接口指定过滤器。
-                                    # 例如：仅获取 `ifAdminStatus = up` 或者 `ifHighSpeed > 1G`的接口
-        - oid: 1.3.6.1.2.1.2.2.1.7          # ifAdminStatus , oid = 1.3.6.1.2.1.2.2.1.7 ， 
+
+      # 动态过滤器 常用于为 ifAlias、ifSpeed 或 ifAdminStatus、ifOperStatus状态中具有特定名称的接口指定过滤器。
+      # 例如：仅获取 `ifAdminStatus = up` 或者 `ifHighSpeed > 1G`的接口
+      dynamic:
+        #- oid: 1.3.6.1.2.1.2.2.1.7 # ifAdminStatus
+        - oid: 1.3.6.1.2.1.2.2.1.8  # ifOperStatus
           targets:
-            - 1.3.6.1.2.1.2.2.1.4              # ifMtu
-            - IF-MIB::ifName              # 1.3.6.1.2.1.31.1.1.1.1
-          values: ["1"]                     # ifAdminStatus值：Up(1), down(2), testing(3)
-        - oid: 1.3.6.1.2.1.31.1.1.1.18      # ifAlias , 自定义的接口描述信息
-          values: ["^$"]                    # ifAlias字段不为空
+            - 1.3.6.1.2.1.2.2.1.1       # ifIndex
+            - 1.3.6.1.2.1.2.2.1.2       # ifDescr
+            - 1.3.6.1.2.1.2.2.1.4       # ifMtu
+            - 1.3.6.1.2.1.2.2.1.7       # ifAdminStatus
+            - 1.3.6.1.2.1.2.2.1.8       # ifOperStatus
+            - 1.3.6.1.2.1.2.2.1.13      # ifInDiscards
+            - 1.3.6.1.2.1.2.2.1.14      # ifInErrors
+            - 1.3.6.1.2.1.2.2.1.19      # ifOutDiscards
+            - 1.3.6.1.2.1.2.2.1.20      # ifOutErrors
+
+            # IF-MIB::ifXTable
+            - 1.3.6.1.2.1.31.1.1.1.1    # ifName
+            - 1.3.6.1.2.1.31.1.1.1.8    # ifHCInMulticastPkts 
+            - 1.3.6.1.2.1.31.1.1.1.9    # ifHCInBroadcastPkts 
+            - 1.3.6.1.2.1.31.1.1.1.12   # ifHCOutMulticastPkts
+            - 1.3.6.1.2.1.31.1.1.1.13   # ifHCOutBroadcastPkts
+            - 1.3.6.1.2.1.31.1.1.1.6    # ifHCInOctets
+            - 1.3.6.1.2.1.31.1.1.1.10   # ifHCOutOctets
+            - 1.3.6.1.2.1.31.1.1.1.15   # ifHighSpeed
+            - 1.3.6.1.2.1.31.1.1.1.18   # ifAlias
+          values: ["1"]         # ifAdminStatus值：Up(1), down(2), testing(3)
+          
+        - oid: 1.3.6.1.2.1.31.1.1.1.1       # ifName
+          targets:
+            - 1.3.6.1.2.1.2.2.1.1       # ifIndex
+            - 1.3.6.1.2.1.2.2.1.2       # ifDescr
+            - 1.3.6.1.2.1.2.2.1.4       # ifMtu
+            - 1.3.6.1.2.1.2.2.1.7       # ifAdminStatus
+            - 1.3.6.1.2.1.2.2.1.8       # ifOperStatus
+            - 1.3.6.1.2.1.2.2.1.13      # ifInDiscards
+            - 1.3.6.1.2.1.2.2.1.14      # ifInErrors
+            - 1.3.6.1.2.1.2.2.1.19      # ifOutDiscards
+            - 1.3.6.1.2.1.2.2.1.20      # ifOutErrors
+
+            # IF-MIB::ifXTable
+            - 1.3.6.1.2.1.31.1.1.1.1    # ifName
+            - 1.3.6.1.2.1.31.1.1.1.8    # ifHCInMulticastPkts 
+            - 1.3.6.1.2.1.31.1.1.1.9    # ifHCInBroadcastPkts 
+            - 1.3.6.1.2.1.31.1.1.1.12   # ifHCOutMulticastPkts
+            - 1.3.6.1.2.1.31.1.1.1.13   # ifHCOutBroadcastPkts
+            - 1.3.6.1.2.1.31.1.1.1.6    # ifHCInOctets
+            - 1.3.6.1.2.1.31.1.1.1.10   # ifHCOutOctets
+            - 1.3.6.1.2.1.31.1.1.1.15   # ifHighSpeed
+            - 1.3.6.1.2.1.31.1.1.1.18   # ifAlias
+          values: ["(?i)^(Tunnel|in|loop|Vlanif)"]  # '(?i)^(?!vlanif|tunnel)|vlanif(1|12)$'  精确匹配vlanif1、vlanif12,排除其他vlanif|tunnel开头的字符串
+
+        #- oid: 1.3.6.1.2.1.31.1.1.1.18      # ifAlias , 自定义的接口描述信息
+        #  targets:
+        #    - 1.3.6.1.2.1.2.2.1.1       # ifIndex
+        #    - 1.3.6.1.2.1.2.2.1.2       # ifDescr
+        #    - 1.3.6.1.2.1.2.2.1.4       # ifMtu
+        #    - 1.3.6.1.2.1.2.2.1.7       # ifAdminStatus
+        #    - 1.3.6.1.2.1.2.2.1.8       # ifOperStatus
+        #    - 1.3.6.1.2.1.2.2.1.13      # ifInDiscards
+        #    - 1.3.6.1.2.1.2.2.1.14      # ifInErrors
+        #    - 1.3.6.1.2.1.2.2.1.19      # ifOutDiscards
+        #    - 1.3.6.1.2.1.2.2.1.20      # ifOutErrors
+
+        #    # IF-MIB::ifXTable
+        #    - 1.3.6.1.2.1.31.1.1.1.1    # ifName
+        #    - 1.3.6.1.2.1.31.1.1.1.8    # ifHCInMulticastPkts 
+        #    - 1.3.6.1.2.1.31.1.1.1.9    # ifHCInBroadcastPkts 
+        #    - 1.3.6.1.2.1.31.1.1.1.12   # ifHCOutMulticastPkts
+        #    - 1.3.6.1.2.1.31.1.1.1.13   # ifHCOutBroadcastPkts
+        #    - 1.3.6.1.2.1.31.1.1.1.6    # ifHCInOctets
+        #    - 1.3.6.1.2.1.31.1.1.1.10   # ifHCOutOctets
+        #    - 1.3.6.1.2.1.31.1.1.1.15   # ifHighSpeed
+        #    - 1.3.6.1.2.1.31.1.1.1.18   # ifAlias
+        #  values: ["^.+"]      # ifAlias字段值不为空（至少包含一个字符）
 
   HUAWEI-ENTITY-EXTENT-MIB:     # 索引是`ENTITY-MIB::entPhysicalIndex`，依赖公共`ENTITY-MIB`文件
     walk:
