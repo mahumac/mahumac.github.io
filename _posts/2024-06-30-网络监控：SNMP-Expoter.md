@@ -5,7 +5,6 @@ categories: [Prometheus, SNMP]
 pin: false
 math: true
 tags: [Prometheus, SNMP] 
-
 ---
 
 ## **SNMP介绍**
@@ -64,12 +63,12 @@ SNMP 使用分层数据结构，而 Prometheus 使用 n 维矩阵，两个系统
 cd ~
 VERSION=0.28.0
 wget https://github.com/prometheus/snmp_exporter/releases/download/v${VERSION}/snmp_exporter-${VERSION}.linux-amd64.tar.gz
-tar -xvf snmp_exporter-${VERSION}.linux-amd64.tar.gz
 ```
 
 ```bash
+tar -xvf snmp_exporter-${VERSION}.linux-amd64.tar.gz
 mkdir -p /etc/snmp_exporter
-cp /snmp_exporter-${VERSION}*/snmp_exporter   /usr/local/bin/
+cp snmp_exporter-${VERSION}*/snmp_exporter   /usr/local/bin/
 ```
 
 ### **添加systemd服务管理**
@@ -164,6 +163,11 @@ go version
    ```
 
    使用命令`source $HOME/.profile` 或`source /etc/profile`  使对配置文件所做的更 立即生效.
+
+   ```bash
+   source $HOME/.profile
+   source /etc/profile
+   ```
 
 4. 使用命令，确认已安装的 Go 版本：
 
