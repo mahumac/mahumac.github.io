@@ -18,7 +18,7 @@ SNMP由三部分组成： **`SNMP内核`** 、 **`管理信息结构SMI`** 和 *
 
 **企业码**：组成 **`OID`** 对象的厂商遵守的标识
 
-> http://www.iana.org/assignments/enterprise-numbers/
+> https://www.iana.org/assignments/enterprise-numbers/
 
 **比如华为的企业码：2011**
 
@@ -44,7 +44,7 @@ SNMP由三部分组成： **`SNMP内核`** 、 **`管理信息结构SMI`** 和 *
 
 显然，这个数字串可以直接理解为系统的名字。在实际使用中， **`我们将其作为参数可以读取该节点的值`** ，如果有写权限的话还可以更改该节点的值，因此， **`SNMP`** 对于系统管理员提供了一套极为便利的工具。但，在一般使用中，我们一般不使用这种节点的表达方式，而是使用更为容易理解的方式，对于上面的这个例子，其往往可以使用 **`SNMPv2-MIB::sysName.0`** 所替代。你可能会想，系统能理解它的含义吗？那你就多虑了，一般在下载 **`SNMP`** 工具包的时候还会下载一个 **`MIB`** 文件包，其提供了所有节点的树形结构。在该结构中可以方便的查找对应的替换表达。
 
-建议使用 [http://oidref.com](http://oidref.com/) 浏览 所有公共MIB。
+建议使用 [https://oidref.com](http://oidref.com/) 浏览 所有公共MIB。
 
 另外https://github.com/librenms/librenms/tree/master/mibs 也是 MIB 的良好来源。
 
