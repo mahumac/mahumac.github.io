@@ -287,9 +287,6 @@ systemctl restart snmp_exporter
     -o /etc/snmp_exporter/snmp-h3c.yml
 ```
 
-```
-```
-
 **`--snmp.mibopts`** flag 的作用：
 
 ```text
