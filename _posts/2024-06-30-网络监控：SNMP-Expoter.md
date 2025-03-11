@@ -696,4 +696,4 @@ scrape_configs:
 
 - `snmp_scrape_packets_retried`
 
-- ` snmp_scrape_packets_send`
+- `snmp_scrape_packets_send`
