@@ -88,12 +88,13 @@ After=network-online.target
 User=prometheus
 Restart=on-failure
 Type=simple
-ExecStart=/usr/local/bin/snmp_exporter \
-         --config.file /etc/snmp_exporter/snmp*.yml \
-         --snmp.module-concurrency=3 \
+ExecStart=/usr/local/bin/snmp_exporter \\
+         --config.file /etc/snmp_exporter/snmp*.yml \\
+         --snmp.module-concurrency=3 \\
          --log.level=info 
 ExecReload=/bin/kill -HUP $MAINPID
-
+TimeoutStopSec=20s
+SendSIGKILL=no
 [Install]
 WantedBy=multi-user.target
 EOF
