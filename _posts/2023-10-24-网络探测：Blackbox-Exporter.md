@@ -37,6 +37,10 @@ Type=simple
 User=nobody
 ExecStart=/usr/local/bin/blackbox_exporter --config.file=/etc/blackbox_exporter/blackbox.yml
 Restart=on-failure
+ExecReload=/bin/kill -HUP $MAINPID
+TimeoutStopSec=10s
+SendSIGKILL=no
+
 [Install]
 WantedBy=multi-user.target
 EOF
@@ -68,7 +72,6 @@ ICMP 探测需要提升的权限才能运行：
 
 ```yaml
 modules:
-...  ...
   icmp:
     prober: icmp
     icmp:
@@ -97,8 +100,6 @@ modules:
                         +--   | Prober-SZ |   --+
                                -----------
 ```
-
-## 配置单个 Prometheus Job 访问多个模块和目标
 
 如果使用普通的方法，一个简单的 Prometheus 作业配置如下所示
 
@@ -142,9 +143,11 @@ scrape_configs:
 
 若**在 Prometheus 中为每个 Blackbox _exporter 定义具有所有目标 （URL） 的作业**，则 需要总共将近 20+ 个 Job 和 2000 多行配置。
 
-
+## 使用 单个 Job 访问多个模块和目标
 
 正如上面提供的 Job 示例中所看到的，其中模块名称、目标和导出器的地址是静态的，因此想要更改某些内容时，则需要更改整个配置。
+
+多目标导出器（例如 snmp_exporter、blackbox_exporter）可以通过 [scrape 配置](https://github.com/prometheus/snmp_exporter#prometheus-configuration)将一组动态目标传递给它们。
 
 下面使用 Prometheus 提供的 [**file_sd_config**](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#file_sd_config) 和 [**relabel_config**](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#relabel_config) 功能，实现**使用单个 Job 访问多个模块和目标**。
 
@@ -183,7 +186,7 @@ scrape_configs:
 
 第一个重要部分是`file_sd_configs`自动发现服务，这意味着可以动态更改文件的内容，而无需重新加载 Prometheus 服务器。
 
-## blackbox_icmp_targets.yml 文件配置
+## icmp_targets.yml 文件配置
 
 ```yaml
 ###################################################################
@@ -393,103 +396,5 @@ groups:
         summary: "ICMP packet loss over 10%"
 ```
 
------------------------
 
-# 使用单个 Job 访问多个模块和目标
-
-多目标导出器（例如 snmp_exporter、blackbox_exporter）可以通过 [scrape 配置](https://github.com/prometheus/snmp_exporter#prometheus-configuration)将一组动态目标传递给它们。
-
-以 http、https 模块为例
-
-1） 将 Blackbox Exporter job添加到`prometheus.yml`文件中：
-
-```yaml
- scrape_configs:
-  # Blackbox Exporter
-  - job_name: 'blackbox'
-    scrape_interval: 10s
-    metrics_path: /probe
-    params:
-      module: 
-        - http_2xx
-        - http_4xx
-        - http200igssl
-    file_sd_configs:
-      - files:
-          - '/etc/prometheus/blackbox/targets/blackbox_exporter-http*.yml'
-    relabel_configs:
-      - source_labels: [__address__]
-        target_label: __param_target
-      - source_labels: [__param_module]  # 将 blackbox_exporter-http*.yml 文件中的 `module`标签传递为 `__param_module`
-        target_label: module
-      - source_labels: [__param_target]
-        target_label: instance
-      - target_label: __address__
-        replacement: 127.0.0.1:9115     # blackbox exporter的IP和端口
-      - target_label: prober            # 自定义标签
-        replacement: prober-01
- # End Blackbox Exporter
-```
-
-2）然后需要配置 Blackbox Exporter 如何处理我们的两个配置文件（一个用于http，一个用于https）：
-
-```yaml
-# Blackbox.yml
-modules:
-  https_2xx:          # >> https 模块
-    prober: http
-    timeout: 5s
-    http:
-      valid_status_codes: [200,204]
-      no_follow_redirects: false
-      fail_if_ssl: false
-      fail_if_not_ssl: true
-      preferred_ip_protocol: "ipv4"
-
-  http_2xx:            # >> http 模块
-    prober: http
-    timeout: 5s
-    http:
-      method: GET
-      no_follow_redirects: false
-      fail_if_ssl: true
-      fail_if_not_ssl: false
-      preferred_ip_protocol: "ipv4"
-
-  http200igssl:
-    prober: http
-    http:
-      valid_status_codes: [200,204]
-      tls_config:
-        insecure_skip_verify: true
-      preferred_ip_protocol: "ip4"
-
-  http_4xx:
-    prober: http
-    http:
-      valid_status_codes: [400,401,403,404]
-      preferred_ip_protocol: "ip4"
-```
-
-3）最终的targets文件配置。这些是黑匣子导出器将监视的站点的实际列表。
-
-```yaml
-# nano /etc/prometheus/blackbox/targets/*.yml
-- labels:
-    module: [https_2xx,http_4xx]    # 需要采集的指标.对应 prometheus.yml文件中 relabel_configs配置块中的 target_labels: module
-  targets:
-  - https://www.google.com
- 
-- labels:
-    module: [http_xx,http_4xx]     # http
-  targets:
-  - http://www.baidu.com/
-  
-- labels:
-    module: http_4xx          # http_4xx
-  targets:
-  - http://www.xxx.com/
-```
-
-# 
 
