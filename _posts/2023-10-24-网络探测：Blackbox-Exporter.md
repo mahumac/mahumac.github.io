@@ -82,7 +82,7 @@ modules:
 
 # 与Prometheus集成
 
-假设有三个机房，分别位于GZ、SH、BJ。在每个机房都各部署一台blackbox_exporter 探针（Prober）:
+假设有三个机房，分别位于GZ、SH、BJ。在每个机房都各部署一台blackbox_exporter 探针（Prober）,监控100+个目标（targets）:
 
 ```tex
                                -----------
@@ -98,7 +98,55 @@ modules:
                                -----------
 ```
 
+## 配置单个 Prometheus Job 访问多个模块和目标
 
+如果使用普通的方法，一个简单的 Prometheus 作业配置如下所示
+
+```yaml
+scrape_configs:
+  - job_name: 'blackbox-1'
+    metrics_path: /probe
+    params:
+      module: [icmp]  # Look for icmp response.
+    static_configs:
+      - targets:
+        - 8.8.8.8
+        - 9.9.9.9 
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: 127.0.0.1:9115  # Blackbox exporter's address.（地区1）
+
+  - job_name: 'blackbox-2'
+    metrics_path: /probe
+    params:
+      module: [icmp]  # Look for icmp response.
+    static_configs:
+      - targets:
+        - 8.8.8.8
+        - 9.9.9.9 
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: 2.2.2.2:9115  # Blackbox exporter's address.（地区2）
+    ... ...
+```
+
+如果在一个Blackbox 导出器的配置中定义了多个URL 和模块，且在 The World 的不同位置有 20+ 个 Blackbox 导出器，该怎么办？
+
+若**在 Prometheus 中为每个 Blackbox _exporter 定义具有所有目标 （URL） 的作业**，则 需要总共将近 20+ 个 Job 和 2000 多行配置。
+
+
+
+正如上面提供的 Job 示例中所看到的，其中模块名称、目标和导出器的地址是静态的，因此想要更改某些内容时，则需要更改整个配置。
+
+下面使用 Prometheus 提供的 [**file_sd_config**](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#file_sd_config) 和 [**relabel_config**](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#relabel_config) 功能，实现**使用单个 Job 访问多个模块和目标**。
 
 ```yaml
 # Prometheus 配置
@@ -113,106 +161,112 @@ scrape_configs:
         refresh_interval: 1m
     relabel_configs:
       - source_labels: [__address__]
+        regex: '.*;.*;.*;.*;(.*)'       # 提取Targets模板中的第5段, 重写 `__param_target`, Target_URL
         target_label: __param_target
       - source_labels: [__param_target]
-        target_label: instance
-      - source_labels: [__param_module]    # 将内置标签`__param_module`修改为`module`
+        target_label: instance          # 重写 `instance`
+      - source_labels: [__param_module] # 将内置标签`__param_module`修改为`module`,并将其添加到 labelset
         target_label: module
-      - target_label: __address__
-        replacement: 127.0.0.1:9115
-      - target_label: prober               # 自定义标签,GZ机房
-        replacement: GZ
-      - target_label: prober_ip
-        replacement: 1.1.1.1               # GZ机房探针公网ip地址
-
-  - job_name: "blackbox_icmp-02"
-    scrape_interval: 1s
-    metrics_path: /probe
-    params:
-      module: [icmp]
-    file_sd_configs:
-      - files: ["/etc/prometheus/file_sd_config.d/blackbox_icmp_targets.yml"]
-        refresh_interval: 1m
-    relabel_configs:
       - source_labels: [__address__]
-        target_label: __param_target
-      - source_labels: [__param_target]
-        target_label: instance
-      - source_labels: [__param_module]     # 将内置标签`__param_module`修改为`module`
-        target_label: module
-      - target_label: __address__
-        replacement: 2.2.2.2:9115
-      - target_label: prober                # 自定义标签，SH机房
-        replacement: SH
-      - target_label: prober_ip             
-        replacement: 2.2.2.2                # SH机房探针ip地址
-
-  - job_name: "blackbox_icmp-03"
-    scrape_interval: 1s
-    metrics_path: /probe
-    params:
-      module: [icmp]
-    file_sd_configs:
-      - files: ["/etc/prometheus/file_sd_config.d/blackbox_icmp_targets.yml"]
-        refresh_interval: 1m
-    relabel_configs:
+        regex: '(.*);.*;.*;.*;.*'       # 提取Targets模板中的第1段, Blackbox_IP_Port
+        target_label: __address__
       - source_labels: [__address__]
-        target_label: __param_target
-      - source_labels: [__param_target]
-        target_label: instance
-      - source_labels: [__param_module]     # 将内置标签`__param_module`修改为`module`
-        target_label: module
-      - target_label: __address__
-        replacement: 3.3.3.3:9115
-      - target_label: prober                # 自定义标签,BJ机房
-        replacement: BJ
-      - target_label: prober_ip             
-        replacement: 3.3.3.3                # BJ机房探针ip地址
+        regex: '.*;(.*);.*;.*;.*'       # 提取Targets模板中的第2段, Prober_Name
+        target_label: prober
+      - source_labels: [__address__]
+        regex: '.*;.*;(.*);.*;.*'       # 提取Targets模板中的第3段, IDC
+        target_label: prober
+      - source_labels: [__address__]
+        regex: '.*;.*;.*;(.*);.*'       # 提取Targets模板中的第4段, Profile
+        target_label: prober
 ```
+
+第一个重要部分是`file_sd_configs`自动发现服务，这意味着可以动态更改文件的内容，而无需重新加载 Prometheus 服务器。
 
 ## blackbox_icmp_targets.yml 文件配置
 
 ```yaml
-##################
-# targets-TYO
-- labels:
-    idc: TYO
-    profile: CN2
-  targets:
-    - 154.82.64.2
-    - 154.82.65.3
-##################
-# targets-TPE
-- labels:
-    idc: TPE
-    profile: CN2
-  targets:
-    - 156.248.76.3
-- labels:
-    idc: TPE
-    profile: 回国优化
-  targets:
-    - 156.248.75.2
-    - 156.248.77.3
-##################
-# targets-HKG
-- labels:
-    idc: HK
-    profile: CN2
-  targets:
-    - 154.82.72.2
-    - 154.82.73.3
-- labels:
-    idc: HK-CMI
-    profile: 回国优化
-  targets:
-    - 154.91.86.2
-    - 154.91.86.3
+###################################################################
+# 这里定义了Blackbox exporter需要监控的所有目标                       #
+# 分号作为分隔符，该模板的结构如下:                                    #
+#  <Blackbox_IP_Port>;<Prober_Name>;<IDC>;<Profile>;<Target_URL>  #
+###################################################################
+- targets:
+  - 1.1.1.1:9115;BJ;TYO;CN2;154.82.64.2
+  - 1.1.1.1:9115;BJ;TYO;CN2;154.82.65.2
+  - 1.1.1.1:9115;BJ;TPE;CN2;156.248.76.2
+  - 1.1.1.1:9115;BJ;TPE;回国优化;156.248.75.2
+  - 1.1.1.1:9115;BJ;TPE;回国优化;156.248.77.2
+  - 1.1.1.1:9115;BJ;HK1;CN2;154.82.72.2
+  - 1.1.1.1:9115;BJ;HK1;CN2;154.82.73.2
+  - 1.1.1.1:9115;BJ;HK-CMI;回国优化;154.91.86.2
+  - 1.1.1.1:9115;BJ;HK-CMI;回国优化;154.91.87.2
+
+  - 2.2.2.2:9115;GZ;TYO;CN2;154.82.64.2
+  - 2.2.2.2:9115;GZ;TYO;CN2;154.82.65.2
+  - 2.2.2.2:9115;GZ;TPE;CN2;156.248.76.2
+  - 2.2.2.2:9115;GZ;TPE;回国优化;156.248.75.2
+  - 2.2.2.2:9115;GZ;TPE;回国优化;156.248.77.2
+  - 2.2.2.2:9115;GZ;HK1;CN2;154.82.72.2
+  - 2.2.2.2:9115;GZ;HK1;CN2;154.82.73.2
+  - 2.2.2.2:9115;GZ;HK-CMI;回国优化;154.91.86.2
+  - 2.2.2.2:9115;GZ;HK-CMI;回国优化;154.91.87.2
+
+  - 3.3.3.3:9115;SZ;TYO;CN2;154.82.64.2
+  - 3.3.3.3:9115;SZ;TYO;CN2;154.82.65.2
+  - 3.3.3.3:9115;SZ;TPE;CN2;156.248.76.2
+  - 3.3.3.3:9115;SZ;TPE;回国优化;156.248.75.2
+  - 3.3.3.3:9115;SZ;TPE;回国优化;156.248.77.2
+  - 3.3.3.3:9115;SZ;HK1;CN2;154.82.72.2
+  - 3.3.3.3:9115;SZ;HK1;CN2;154.82.73.2
+  - 3.3.3.3:9115;SZ;HK-CMI;回国优化;154.91.86.2
+  - 3.3.3.3:9115;SZ;HK-CMI;回国优化;154.91.87.2
 ```
 
-## 查询 ICMP 丢包
+此处，每个 `target` 都包含所有元数据，这些元数据将在抓取后提取到时间序列的最终标签集中。如上所示，使用了`;`符号作为分隔符。(分隔符可以是任何有效字符)。
 
-### 使用PromQL 计算 ICMP 丢包
+通过提供的分隔符拆分行，则每个目标将获得 5 个字段。这些字段如下：
+
+```
+<Blackbox_IP_Port>;<Prober_Name>;<IDC>;<Profile>;<Target_URL>
+```
+
+1. Blackbox 导出器地址 （IP：PORT）
+2. 在 Blackbox 导出器配置中定义的``Prober`名称
+3. 需要监控的目标所在的 `IDC` 名称
+4. 需要监控的目标的 `Profile` 名称
+5. 需要监控的目标 URL。
+
+第二个重要的部分是`relable_configs` , 重新标记是一个强大的工具，可在目标被抓取之前动态重写目标的标签集。在此示例中，有 5 个重新标记的步骤。所有步骤的逻辑几乎相同。
+
+### 重新标记导出器地址
+
+在此步骤中，我们应该告诉 Prometheus 目标字符串中的哪个字段负责标签。`__address__`是一个特殊标签，设置为目标的地址。 `<ip>:<port>`
+
+```yaml
+      - source_labels: [__address__]
+        regex: '(.*);.*;.*;.*;.*'       # 提取Targets模板中的第1段, Blackbox_IP_Port
+        target_label: __address__
+```
+
+与`__address__`标签对应的值是通过 matcher 提取的。`regex` 是一个有效的 RE2 正则表达式
+
+> 输入文本：
+> `1.1.1.1:9115;BJ;TYO;CN2;154.82.64.2`
+>
+> 正则表达式：
+> `(.*);.*;.*;.*;.*`
+>
+> 输出：
+> `${1}` = `1.1.1.1:9115`
+
+其他的`relable_configs`就不一一解释了，所有的步骤和逻辑都相同。
+
+
+
+# 查询 ICMP 丢包
+
+## 使用PromQL 计算 ICMP 丢包
 
 * 通过metric   `probe_success`查询 icmp ping 是否成功 (success = 1 , faile = 0)
 
@@ -228,7 +282,7 @@ probe_success{job=~"blackbox_icmp.*"}
 
 
 
-###  使用PromQL 计算 ICMP RTT
+##  使用PromQL 计算 ICMP RTT
 
 * 通过以下以下PromQL, 计算60秒内的 平均 icmp rtt 值。
 
@@ -277,7 +331,7 @@ sum_over_time(
 sum_over_time(probe_success{job=~"blackbox_icmp.*"}[$interval])
 ```
 
-### 计算 ICMP Jitter
+## 计算 ICMP Jitter
 
 ```bash
 # 计算 ICMP抖动 > 15ms 的IP
@@ -290,7 +344,7 @@ stddev_over_time(
  ) > 0.015
 ```
 
-### 使用 Record 规则 计算 ICMP 丢包
+## 使用 Record 规则 计算 ICMP 丢包
 
 也可以使用 promtheus 记录规则来计算 ICMP 丢包情况：
 
