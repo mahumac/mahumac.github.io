@@ -714,6 +714,8 @@ scrape_configs:
         target_label: __param_module
       - target_label: __address__
         replacement: 127.0.0.19:9116        # snmp_exporter服务IP和端口
+      - target_label: prober
+        replacement: HK1
 
   - job_name: "snmp-2"
     scrape_interval: 5m
@@ -731,6 +733,16 @@ scrape_configs:
         target_label: __param_module
       - target_label: __address__
         replacement: 127.0.0.1:9116        # snmp_exporter服务IP和端口
+      - target_label: prober
+        replacement: HK1
+     metric_relabel_configs:
+      - source_labels: ["ipNetToPhysicalType"]
+        regex: '2'
+        action: drop
+      - source_labels: ["ipNetToPhysicalPhysAddress"]
+        regex: '00:00:00:00:00:00'
+        action: drop
+
 ```
 
 
