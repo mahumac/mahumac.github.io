@@ -241,7 +241,15 @@ scrape_configs:
 
 ### 重新标记导出器地址
 
-在此步骤中，我们应该告诉 Prometheus 目标字符串中的哪个字段负责标签。`__address__`是一个特殊标签，设置为目标的地址。 `<ip>:<port>`
+在此步骤中，我们应该告诉 Prometheus 目标字符串中的哪个字段负责标签。
+
+对于发现的每个target，Prometheus默认会执行如下操作；
+
+- `__address__`标签的值为该target的套接字地址：“<host>:<port>”;
+- `instance`标签的值为`__address__`的值；
+- `__param_<name>`标签的值为传递的URL参数中的第一名称为<name>的参数的值；
+
+以“__”开头的所有标签是内置的特殊标签：
 
 ```yaml
       - source_labels: [__address__]
