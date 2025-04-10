@@ -243,11 +243,12 @@ scrape_configs:
 
 在此步骤中，我们应该告诉 Prometheus 目标字符串中的哪个字段负责标签。
 
-对于发现的每个target，Prometheus默认会执行如下操作；
+默认情况下，当Prometheus加载Target实例完成后，这些Target时候都会包含一些默认的标签：
 
-- `__address__`标签的值为该target的套接字地址：“<host>:<port>”;
-- `instance`标签的值为`__address__`的值；
-- `__param_<name>`标签的值为传递的URL参数中的第一名称为<name>的参数的值；
+- `__address__`：当前Target实例的地址`<host>:<port>`
+- `__scheme__`：抓取目标服务访问地址的HTTP Scheme，HTTP或者HTTPS
+- `__metrics_path__`：抓取目标的 Metrics 端点
+- `__param_<name>`：抓取任务目标服务的中包含的请求参数
 
 以“__”开头的所有标签是内置的特殊标签：
 
@@ -255,6 +256,8 @@ scrape_configs:
       - source_labels: [__address__]
         regex: '(.*);.*;.*;.*;.*'       # 提取Targets模板中的第1段, Blackbox_IP_Port
         target_label: __address__
+        replacement: "${1}"         # (default = $1)，可以省略
+        action: replace             # (default = replace)，可以省略
 ```
 
 与`__address__`标签对应的值是通过 matcher 提取的。`regex` 是一个有效的 RE2 正则表达式
