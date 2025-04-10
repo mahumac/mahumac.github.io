@@ -164,24 +164,24 @@ scrape_configs:
         refresh_interval: 1m
     relabel_configs:
       - source_labels: [__address__]
-        regex: '.*;.*;.*;.*;(.*)'       # 提取Targets模板中的第5段, 重写 `__param_target`, Target_URL
-        target_label: __param_target
-      - source_labels: [__param_target]
-        target_label: instance          # 重写 `instance`
+        regex: '.*;.*;.*;.*;(.*)'        # 提取Targets模板中的第5段
+        target_label: __param_target     # 传递 `__param_target`的值 给 Blackbox exporter 
+      - source_labels: [__param_target]  # 重写 `__param_target` 为`instance`
+        target_label: instance
       - source_labels: [__param_module] # 将内置标签`__param_module`修改为`module`,并将其添加到 labelset
         target_label: module
-      - source_labels: [__address__]
-        regex: '(.*);.*;.*;.*;.*'       # 提取Targets模板中的第1段, Blackbox_IP_Port
-        target_label: __address__
       - source_labels: [__address__]
         regex: '.*;(.*);.*;.*;.*'       # 提取Targets模板中的第2段, Prober_Name
         target_label: prober
       - source_labels: [__address__]
         regex: '.*;.*;(.*);.*;.*'       # 提取Targets模板中的第3段, IDC
-        target_label: prober
+        target_label: idc
       - source_labels: [__address__]
         regex: '.*;.*;.*;(.*);.*'       # 提取Targets模板中的第4段, Profile
-        target_label: prober
+        target_label: Profile
+      - source_labels: [__address__]
+        regex: '(.*);.*;.*;.*;.*'       # 提取Targets模板中的第1段,注意顺序不能错。 Blackbox_IP_Port
+        target_label: __address__
 ```
 
 第一个重要部分是`file_sd_configs`自动发现服务，这意味着可以动态更改文件的内容，而无需重新加载 Prometheus 服务器。
@@ -245,10 +245,12 @@ scrape_configs:
 
 默认情况下，当Prometheus加载Target实例完成后，这些Target时候都会包含一些默认的标签：
 
-- `__address__`：当前Target实例的地址`<host>:<port>`
-- `__scheme__`：抓取目标服务访问地址的HTTP Scheme，HTTP或者HTTPS
-- `__metrics_path__`：抓取目标的 Metrics 端点
-- `__param_<name>`：抓取任务目标服务的中包含的请求参数
+- `__address__`：其值为 当前Target实例的地址`<host/ip>:<port>`
+- `__scheme__`：其值为 抓取目标服务访问地址的HTTP Scheme，HTTP或者HTTPS
+- `__metrics_path__`：其值为 抓取目标的 Metrics 端点
+- `__param_<name>`：其值为 传递的URL参数中第一个名称为`<name>`的参数的值
+  - 如果路径中存在任何URL参数，则它们的前缀会设置为`__param_<name>`
+
 
 以“__”开头的所有标签是内置的特殊标签：
 
@@ -270,6 +272,34 @@ scrape_configs:
 >
 > 输出：
 > `${1}` = `1.1.1.1:9115`
+
+### 重新标记instance标签
+
+在此步骤中，将在标签下提取最后一个字段（目标 URL）。`instance`
+
+```yaml
+      - source_labels: [__address__]
+        regex: '.*;.*;.*;.*;(.*)'       # 提取Targets模板中的第5段
+        target_label: __param_target    # 传递 `__param_target`的值 给 Blackbox exporter 
+      - source_labels: [__param_target] # 重写 `__param_target` 为`instance`
+        target_label: instance
+```
+
+> 输入文本：
+> `1.1.1.1:9115;BJ;TYO;CN2;154.82.64.2`
+>
+> 正则表达式：
+> `.*;.*;.*;.*;(.*)`
+>
+> 输出：
+> `${1}` = `154.82.64.2`
+
+
+
+> - `__param_<name>`：其值为 传递的URL参数中第一个名称为`<name>`的参数的值
+>   - 如果路径中存在任何URL参数，则它们的前缀会设置为`__param_<name>`
+
+
 
 其他的`relable_configs`就不一一解释了，所有的步骤和逻辑都相同。
 
