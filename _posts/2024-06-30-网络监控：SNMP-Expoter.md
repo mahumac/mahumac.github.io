@@ -73,7 +73,7 @@ cp snmp_exporter-${VERSION}*/snmp_exporter   /usr/local/bin/
 
 ### **添加systemd服务管理**
 
-> `--config.file`参数可以多次使用以加载多个文件，或者使用通配符，例如`snmp*.yml`
+> `--config.file`参数可以多次使用以加载多个文件，或者使用通配符，例如`snmp*.yaml`
 >
 > `--snmp.module-concurrency`参数可以在一次抓取中从多个模块中检索信息
 
@@ -89,7 +89,7 @@ User=prometheus
 Restart=on-failure
 Type=simple
 ExecStart=/usr/local/bin/snmp_exporter \\
-         --config.file /etc/snmp_exporter/snmp*.yml \\
+         --config.file /etc/snmp_exporter/snmp*.yaml \\
          --snmp.module-concurrency=3 \\
          --log.level=info 
 ExecReload=/bin/kill -HUP $MAINPID
@@ -109,7 +109,7 @@ systemctl status snmp_exporter
 
 ## **SNMP Exporter Generator**
 
-上面已经完成 **`SNMP Exporter`** 的部署，前面说了，手写 **`snmp.yml`** 是非常不友好的。
+上面已经完成 **`SNMP Exporter`** 的部署，前面说了，手写 **`snmp.yaml`** 是非常不友好的。
 
 故我们需要一款配置生成工具进行配置生成，只需要我们填写一些关键的信息即可得到我们想要的配置文件，比如想要采集交换机的指标。
 
@@ -225,22 +225,22 @@ export MIBDIRS=~/snmp_exporter/generator/mibs
 export MIBDIRS=~/CE_V200R023C00SPC500_MIB/MIBFile
 ```
 
-#### 生成 snmp.yml
+#### 生成 snmp.yaml
 
 ```bash
-# 生成最终snmp.yml文件
-# 注意： generator.yml 配置在下一章节介绍
+# 生成最终snmp.yaml文件
+# 注意： generator.yaml 配置在下一章节介绍
 ./generator --fail-on-parse-errors --snmp.mibopts=u generate  \
     -m ~/CE_V200R023C00SPC500_MIB/MIBFile  \
     -m ~/snmp_exporter/generate/mibs  \
-    -g /etc/snmp_exporter/generator.yml  \
-    -o /etc/snmp_exporter/snmp.yml
+    -g /etc/snmp_exporter/generator.yaml  \
+    -o /etc/snmp_exporter/snmp.yaml
 ```
 
- 将最终生成的snmp.yml文件移动到snmp_exporter程序配置文件读取的路径
+ 将最终生成的snmp.yaml文件移动到snmp_exporter程序配置文件读取的路径
 
 ```bash
-mv snmp.yml /opt/snmp_exporter/
+mv snmp.yaml /opt/snmp_exporter/
 ```
 
 重启 snmp_exporter
@@ -251,14 +251,14 @@ systemctl restart snmp_exporter
 
 **运行过程说明：**
 
-配置生成器从 **`generator.yml`** 中读取简化的收集指令并把相应的配置写入 **`snmp.yml`** 。 **`snmp_exporter`** 程序仅使用 **`snmp.yml`** 文件从开启了 **`snmp`** 的设备收集数据。
+配置生成器从 **`generator.yaml`** 中读取简化的收集指令并把相应的配置写入 **`snmp.yaml`** 。 **`snmp_exporter`** 程序仅使用 **`snmp.yaml`** 文件从开启了 **`snmp`** 的设备收集数据。
 
 **generator程序  `args`参数解析**:
 
 ```text
 # ./generator [<flags>] <command> [<args> ...]
 -m    # 生成配置 需要读取的mibs库文件目录 可同时指定多个
--g    # 生成配置 需要读取的生成器配置文件 generator.yml
+-g    # 生成配置 需要读取的生成器配置文件 generator.yaml
 -o    # 生成的配置保存路径和文件名
 ```
 
@@ -280,16 +280,16 @@ systemctl restart snmp_exporter
 ./generator --fail-on-parse-errors --snmp.mibopts=u generate \
     -m ~/huawei/mibs \
     -m ~/snmp_exporter/generate/mibs \
-    -g /etc/snmp_exporter/generator-huawei.yml \
-    -o /etc/snmp_exporter/snmp-huawei.yml
+    -g /etc/snmp_exporter/generator-huawei.yaml \
+    -o /etc/snmp_exporter/snmp-huawei.yaml
 ```
 
 ```bash
 ./generator --fail-on-parse-errors --snmp.mibopts=u generate \
     -m ~/huawei/mibs \
     -m ~/snmp_exporter/generate/mibs \
-    -g /etc/snmp_exporter/generator-h3c.yml \
-    -o /etc/snmp_exporter/snmp-h3c.yml
+    -g /etc/snmp_exporter/generator-h3c.yaml \
+    -o /etc/snmp_exporter/snmp-h3c.yaml
 ```
 
 **`--snmp.mibopts`** flag 的作用：
@@ -313,13 +313,17 @@ snmpwalk --help
 
 **mibs文件目录规划**
 
-建议**不同类型的设备**各自新建一个目录，其中包含不同设备类型的 **`mibs`** 目录、生成器可执行文件和 **`generator.yml`** 配置文件。这是为了避免 **`MIB`** 定义中的名称空间冲突。仅在设备的 **`mibs`** 目录中保留所需的 **`MIB文件`** 。
+建议**不同类型的设备**各自新建一个目录，其中包含不同设备类型的 **`mibs`** 目录、生成器可执行文件和 **`generator.yaml`** 配置文件。这是为了避免 **`MIB`** 定义中的名称空间冲突。仅在设备的 **`mibs`** 目录中保留所需的 **`MIB文件`** 。
 
 ### Generator 配置
 
-可以按照不同设备 或 不同模块，创建不同的`generator.yml`文件
+可以按照不同设备 或 不同模块，创建不同的`generator.yaml`文件
 
-`generator.yml`的配置如下：
+`generator.yaml`的配置如下：
+
+#### 采集系统基本信息
+
+`generator-comm.yaml`:
 
 ```yaml
 auths:
@@ -337,7 +341,14 @@ modules:
     walk:
       - "SNMPv2-MIB::system"    # .1.3.6.1.2.1.1 , [sysName, sysDescr, sysUpTime, sysLocation, sysContact],etc
       - "SNMP-FRAMEWORK-MIB::snmpEngineTime"    # 1.3.6.1.6.3.10.2.1.3, 运行时间，单位是秒。可以替代`SNMPv2-MIB::sysUpTime`
+```
 
+#### 采集接口信息 (IF-MIB)
+
+`generator-IF-MIB.yaml`:
+
+```yaml
+modules:
   # Default IF-MIB interfaces table with ifIndex.
   IF-MIB:
     walk:
@@ -478,7 +489,14 @@ modules:
         #    - 1.3.6.1.2.1.31.1.1.1.15   # ifHighSpeed
         #    - 1.3.6.1.2.1.31.1.1.1.18   # ifAlias
         #  values: ["^.+"]      # ifAlias字段值不为空（至少包含一个字符）
+```
 
+#### 采集光模块、CPU、风扇等信息（HUAWEI）
+
+`generator-HUAWEI-ENTITY-EXTENT-MIB.yaml`:
+
+```yaml
+modules:
   HUAWEI-ENTITY-EXTENT-MIB:     # 索引是`ENTITY-MIB::entPhysicalIndex`，依赖公共`ENTITY-MIB`文件
     walk:
       ## entPhysicalTable , 每一个物理实体以及实体的类型和信息。
@@ -644,7 +662,14 @@ modules:
             - 1.3.6.1.4.1.2011.5.25.31.1.1.1.1.11   # hwEntityTemperature
             - 1.3.6.1.4.1.2011.5.25.31.1.1.1.1.19   # hwEntityMemSizeMega
           values: ["(FM|CE)(88|68)\\d+.*"]         # 保留实体名为 CE8850-64CQ-EI FM-8850-64CQ-EI CE8861-4C-EI 等
+```
 
+#### 采集Flash存储信息 (HUAWEI)
+
+`generator-HUAWEI-FLASH-MAN-MIB.yaml`:
+
+```yaml
+modules:
   HUAWEI-FLASH-MAN-MIB:
     walk: 
       - hwStorageSpace      # 1.3.6.1.4.1.2011.6.9.1.4.2.1.3 , Flash设备空间的大小 单位是千字节
@@ -669,14 +694,100 @@ modules:
       #- 1.3.6.1.4.1.2011.6.3.5.1.1.4          # hwMemoryDevRawSliceUsed 每块板上已占用的raw slice内存总量
 ```
 
-`generator.yml`文件修改完成之后，重新生成 `snmp.yaml`文件
+#### 采集 MAC地址表 FdbTable
+
+`generator-BRIDGE-MIB.yaml`:
+
+```yaml
+## 采集 MAC地址表 （FdbTable）
+# `BRIDGE-MIB::dot1dTpFdbTable` , Q-BRIDGE-MIB::dot1qVlanFdbId包含了端口的vlan信息。
+
+#### 查询MAC地址和接口的对应关系
+# `dot1dTpFdbTable`表描述了当前设备上存在的MAC地址表项。其中`dot1dTpFdbAddress`节点描述了MAC地址，`dot1dTpFdbPort`节点描述了MAC地址对应的网桥端口号。
+# `dot1dBasePortIfIndex`节点描述了网桥端口号和接口索引的对应关系。ifName节点描述了接口索引和接口名的对应关系。需要链式查找。
+modules:
+  BRIDGE-MIB:
+    walk:
+      # "dot1dTpFdbTable"  该表用于记录 MAC地址和接口的对应关系（FdbTable）
+      # 1.3.6.1.2.1.17.4.3.1.1  # dot1dTpFdbAddress, MAC地址信息 OCTET STRING{(6,6)}
+      # 1.3.6.1.2.1.17.4.3.1.2  # dot1dTpFdbPort, dot1dTpFdbAddress对应实例的值的端口号
+      # 1.3.6.1.2.1.17.4.3.1.3  # dot1dTpFdbStatus, MAC条目的状态 INTEGER{other(1),invalid(2),learned(3),self(4),mgmt(5)}
+      # 链式查找：dot1dTpFdbAddress --> dot1dTpFdbPort --> dot1dBasePort --> dot1dBasePortIfIndex(IF-MIB::ifIndex)
+
+      - "BRIDGE-MIB::dot1dTpFdbTable"       # 1.3.6.1.2.1.17.4.3, FDB表（mac转发表），该表的索引是`dot1dTpFdbAddress`(即mac地址)
+      - "BRIDGE-MIB::dot1dBasePortTable"     # 1.3.6.1.2.1.17.1.4, 该表的索引是 `dot1dBasePort`。
+
+    max_repetitions: 50   # 使用GET/GETBULK,一次可以请求的最大objects。值为60时，一个snmp resposne udp包有可能 >1500byte,不建议过大。默认为25。
+    retries: 3
+    timeout: 5s           # 每个SNMP request的超时时间, defaults to 5s.
+
+    lookups:    # 针对Table类型的 OID 做标签‘插入/修改’操作，注意顺序不能错
+      - source_indexes: [dot1dTpFdbAddress]
+        lookup: BRIDGE-MIB::dot1dTpFdbPort      # dot1dTpFdbAddress 查找 dot1dTpFdbPort (dot1dTpFdbTable 表内查找)
+
+      - source_indexes: [dot1dTpFdbPort]
+        lookup: BRIDGE-MIB::dot1dBasePort       #（链接2个表：dot1dTpFdbTable，dot1dBasePortTable）查找 dot1dBasePort
+      - source_indexes: [dot1dTpFdbPort]
+        lookup: dot1dBasePortIfIndex            #（链接2个表：dot1dTpFdbTable，dot1dBasePortTable）查找 dot1dBasePortIfIndex
+
+      - source_indexes: [dot1dBasePortIfIndex]  #（链接2个表：，dot1dBasePortTable，IF-MIB::ifXTable）
+        lookup: IF-MIB::ifName             # 1.3.6.1.2.1.31.1.1.1.1, 接口名称
+      - source_indexes: [dot1dBasePortIfIndex]
+        lookup: IF-MIB::ifAlias            # 如果接口数量很多，避免高基数问题，不要将ifAlias作为table插入metric中
+
+      - source_indexes: [dot1dBasePort]         #（链接3个表：，dot1dTpFdbTable，dot1dBasePortTable，IF-MIB::ifXTable）
+        lookup: dot1dBasePortIfIndex
+
+      - source_indexes: [dot1dTpFdbAddress]
+        lookup: BRIDGE-MIB::dot1dTpFdbStatus
+
+    overrides:
+      dot1dTpFdbPort:
+        ignore: true        # 丢弃metric: dot1dTpFdbPort{}
+      dot1dTpFdbStatus:     # MAC条目的状态 INTEGER{other(1),invalid(2),learned(3),self(4),mgmt(5)}
+        ignore: true
+        type: EnumAsInfo
+
+      dot1dBasePort:
+        ignore: true
+      dot1dBasePortIfIndex:
+        ignore: true
+```
+
+#### 重新生成 `snmp.yaml`
+
+`generator-*.yaml`文件修改完成之后，重新生成 `snmp-*.yaml`文件
+
+```bash
+~/snmp_exporter/generator/generator --fail-on-parse-errors --snmp.mibopts=u generate  \
+    -m ~/CE_V200R023C00SPC500_MIB/MIBFile  \
+    -m ~/snmp_exporter/generate/mibs  \
+    -g /etc/snmp_exporter/generator/generator-comm.yaml  \
+    -o /etc/snmp_exporter/snmp-comm.yaml
+```
 
 ```bash
 ~/snmp_exporter/generator/generator --fail-on-parse-errors --snmp.mibopts=u generate \
     -m ~/CE_V200R023C00SPC500_MIB/MIBFile/ \
     -m ~/snmp_exporter/generate/mibs \
-    -g /etc/snmp_exporter/generator-huawei.yml \
-    -o /etc/snmp_exporter/snmp-huawei.yml
+    -g /etc/snmp_exporter/generator-IF-MIB.yaml \
+    -o /etc/snmp_exporter/snmp-IF-MIB.yaml
+```
+
+```bash
+~/snmp_exporter/generator/generator --fail-on-parse-errors --snmp.mibopts=u generate  \
+    -m ~/CE_V200R023C00SPC500_MIB/MIBFile  \
+    -m ~/snmp_exporter/generate/mibs  \
+    -g /etc/snmp_exporter/generator/generator-HUAWEI-ENTITY-EXTENT-MIB.yaml  \
+    -o /etc/snmp_exporter/snmp-HUAWEI-ENTITY-EXTENT-MIB.yaml.yaml
+```
+
+```bash
+~/snmp_exporter/generator/generator --fail-on-parse-errors --snmp.mibopts=u generate  \
+    -m ~/CE_V200R023C00SPC500_MIB/MIBFile  \
+    -m ~/snmp_exporter/generate/mibs  \
+    -g /etc/snmp_exporter/generator/generator-BRIDGE-MIB.yaml  \
+    -o /etc/snmp_exporter/snmp-BRIDGE-MIB.yaml
 ```
 
 然后重新启动 `snmp_exporter`
@@ -689,7 +800,7 @@ systemctl restart snmp_exporter.service
 
 ## Prometheus配置
 
-按照`generator.yml`中定义的不同module，查分成多个job 。以便优化`snmp_exporter`的性能：
+按照`generator.yaml`中定义的不同module，查分成多个job 。以便优化`snmp_exporter`的性能：
 
 - 配合 `--snmp.module-concurrency=3 `参数，提高并发性，可以在一次抓取中从多个模块中检索信息
 - 根据需要，每个module的采集周期可以设置不一样。例如 接口信息1分钟收集一次, 光模块信息5分钟收集一次
@@ -702,7 +813,7 @@ scrape_configs:
     scrape_interval: 1m
     scrape_timeout: 1m
     file_sd_configs:
-      - files: ["/etc/prometheus/file_sd_config.d/snmp-*.yml"]
+      - files: ["/etc/prometheus/file_sd_config.d/snmp-*.yaml"]
         refresh_interval: 1m
     metrics_path: /snmp
     relabel_configs:
@@ -721,7 +832,7 @@ scrape_configs:
     scrape_interval: 5m
     scrape_timeout: 5m
     file_sd_configs:
-      - files: ["/etc/prometheus/file_sd_config.d/snmp-*.yml"]
+      - files: ["/etc/prometheus/file_sd_config.d/snmp-*.yaml"]
         refresh_interval: 1m
     metrics_path: /snmp
     relabel_configs:
@@ -749,7 +860,7 @@ scrape_configs:
 
 按照不同的采集频率来拆分job:
 
-新建 `/etc/prometheus/file_sd_config.d/snmp-1m-huawei.yml`文件，对应Prometheus中的1分钟轮询 Job，添加需要收集snmp信息的设备
+新建 `/etc/prometheus/file_sd_config.d/snmp-1m-huawei.yaml`文件，对应Prometheus中的1分钟轮询 Job，添加需要收集snmp信息的设备
 
 ```yaml
 # 1分钟轮询的模块, 注意`module` 参数中是使用逗号分隔的模块名称列表，不是数组
@@ -757,13 +868,13 @@ scrape_configs:
     auth: "public_v2"
     model: "CE8800"
     region: "BJ"
-    module: "IF-MIB,SNMPv2-MIB"  # 名称对应generator.yml中的module名称
+    module: "IF-MIB,SNMPv2-MIB"  # 名称对应generator.yaml中的module名称
   targets:
     - 192.168.1.1
     - 10.10.1.1
 ```
 
-新建 `/etc/prometheus/file_sd_config.d/snmp-5m-huawei.yml`文件，对应Prometheus中的5分钟轮询 Job，添加需要收集snmp信息的设备
+新建 `/etc/prometheus/file_sd_config.d/snmp-5m-huawei.yaml`文件，对应Prometheus中的5分钟轮询 Job，添加需要收集snmp信息的设备
 
 ```yaml
 # 5分钟轮询的模块,注意`module` 参数中是使用逗号分隔的模块名称列表，不是数组
@@ -771,7 +882,7 @@ scrape_configs:
     auth: "public_v2"
     model: "CE8800"
     region: "BJ"
-    module: "HUAWEI-ENTITY-EXTENT-MIB,HUAWEI-FLASH-MAN-MIB" # 名称对应generator.yml中的module名称
+    module: "HUAWEI-ENTITY-EXTENT-MIB,HUAWEI-FLASH-MAN-MIB" # 名称对应generator.yaml中的module名称
   targets:
     - 192.168.1.1
     - 10.10.1.1
