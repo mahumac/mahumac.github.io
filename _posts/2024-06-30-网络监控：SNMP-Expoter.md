@@ -337,20 +337,20 @@ auths:
 modules:
   # SNMPv2-MIB 系统基础信息，例如： sysName, sysDescr, sysUpTime, sysLocation, etc.
   # SNMPv2-MIB::sysUpTime, 1.3.6.1.2.1.1.3 , 启动以来运行的时间，32位计数器，单位为百分之一秒。 每496天会发生重置，不等于系统正常运行时间，
-  SNMPv2-MIB:
+  snmpv2-mib:
     walk:
       - "SNMPv2-MIB::system"    # .1.3.6.1.2.1.1 , [sysName, sysDescr, sysUpTime, sysLocation, sysContact],etc
       - "SNMP-FRAMEWORK-MIB::snmpEngineTime"    # 1.3.6.1.6.3.10.2.1.3, 运行时间，单位是秒。可以替代`SNMPv2-MIB::sysUpTime`
 ```
 
-#### 采集接口信息 (IF-MIB)
+#### 采集接口信息 (if-mib)
 
-`generator-IF-MIB.yaml`:
+`generator-if-mib.yaml`:
 
 ```yaml
 modules:
   # Default IF-MIB interfaces table with ifIndex.
-  IF-MIB:
+  if-mib:
     walk:
       # 如果设备接口数量太多，遍历整个ifTable需要花费较长时间(超过1分钟)，建议只采集需要的项目 / 或者拆分为多个module去采集。
       # IF-MIB::ifTable     # 1.3.6.1.2.1.2.2 , 32位计数器， 采集间隔必须大于5s。该表的索引是ifIndex.
@@ -493,11 +493,11 @@ modules:
 
 #### 采集光模块、CPU、风扇等信息（HUAWEI）
 
-`generator-HUAWEI-ENTITY-EXTENT-MIB.yaml`:
+`generator-huawei-entity-extent-mib.yaml`:
 
 ```yaml
 modules:
-  HUAWEI-ENTITY-EXTENT-MIB:     # 索引是`ENTITY-MIB::entPhysicalIndex`，依赖公共`ENTITY-MIB`文件
+  huawei-entity-extent-mib:     # 索引是`ENTITY-MIB::entPhysicalIndex`，依赖公共`ENTITY-MIB`文件
     walk:
       ## entPhysicalTable , 每一个物理实体以及实体的类型和信息。
       - ENTITY-MIB::entPhysicalIndex    # 1.3.6.1.2.1.47.1.1.1.1.1 该表的索引
@@ -666,11 +666,11 @@ modules:
 
 #### 采集Flash存储信息 (HUAWEI)
 
-`generator-HUAWEI-FLASH-MAN-MIB.yaml`:
+`generator-huawei-flash-man-mib.yaml`:
 
 ```yaml
 modules:
-  HUAWEI-FLASH-MAN-MIB:
+  huawei-flash-man-mib:
     walk: 
       - hwStorageSpace      # 1.3.6.1.4.1.2011.6.9.1.4.2.1.3 , Flash设备空间的大小 单位是千字节
       - hwStorageSpaceFree  # 1.3.6.1.4.1.2011.6.9.1.4.2.1.4 , Flash设备剩余空间 单位是千字节
@@ -696,7 +696,7 @@ modules:
 
 #### 采集 MAC地址表 FdbTable
 
-`generator-BRIDGE-MIB.yaml`:
+`generator-bridge-mib.yaml`:
 
 ```yaml
 ## 采集 MAC地址表 （FdbTable）
@@ -706,7 +706,7 @@ modules:
 # `dot1dTpFdbTable`表描述了当前设备上存在的MAC地址表项。其中`dot1dTpFdbAddress`节点描述了MAC地址，`dot1dTpFdbPort`节点描述了MAC地址对应的网桥端口号。
 # `dot1dBasePortIfIndex`节点描述了网桥端口号和接口索引的对应关系。ifName节点描述了接口索引和接口名的对应关系。需要链式查找。
 modules:
-  BRIDGE-MIB:
+  bridge-mib:
     walk:
       # "dot1dTpFdbTable"  该表用于记录 MAC地址和接口的对应关系（FdbTable）
       # 1.3.6.1.2.1.17.4.3.1.1  # dot1dTpFdbAddress, MAC地址信息 OCTET STRING{(6,6)}
@@ -767,27 +767,27 @@ modules:
 ```
 
 ```bash
-~/snmp_exporter/generator/generator --fail-on-parse-errors --snmp.mibopts=u generate \
-    -m ~/CE_V200R023C00SPC500_MIB/MIBFile/ \
-    -m ~/snmp_exporter/generate/mibs \
-    -g /etc/snmp_exporter/generator-IF-MIB.yaml \
-    -o /etc/snmp_exporter/snmp-IF-MIB.yaml
+~/snmp_exporter/generator/generator --fail-on-parse-errors --snmp.mibopts=u generate  \
+    -m ~/CE_V200R023C00SPC500_MIB/MIBFile  \
+    -m ~/snmp_exporter/generate/mibs  \
+    -g /etc/snmp_exporter/generator/generator-if-mib.yaml  \
+    -o /etc/snmp_exporter/snmp-if-mib.yaml
 ```
 
 ```bash
 ~/snmp_exporter/generator/generator --fail-on-parse-errors --snmp.mibopts=u generate  \
     -m ~/CE_V200R023C00SPC500_MIB/MIBFile  \
     -m ~/snmp_exporter/generate/mibs  \
-    -g /etc/snmp_exporter/generator/generator-HUAWEI-ENTITY-EXTENT-MIB.yaml  \
-    -o /etc/snmp_exporter/snmp-HUAWEI-ENTITY-EXTENT-MIB.yaml.yaml
+    -g /etc/snmp_exporter/generator/generator-huawei-entity-extent-mib.yaml  \
+    -o /etc/snmp_exporter/snmp-huawei-entity-extent-mib.yaml
 ```
 
 ```bash
 ~/snmp_exporter/generator/generator --fail-on-parse-errors --snmp.mibopts=u generate  \
     -m ~/CE_V200R023C00SPC500_MIB/MIBFile  \
     -m ~/snmp_exporter/generate/mibs  \
-    -g /etc/snmp_exporter/generator/generator-BRIDGE-MIB.yaml  \
-    -o /etc/snmp_exporter/snmp-BRIDGE-MIB.yaml
+    -g /etc/snmp_exporter/generator/generator-bridge-mib.yaml  \
+    -o /etc/snmp_exporter/snmp-bridge-mib.yaml
 ```
 
 然后重新启动 `snmp_exporter`
