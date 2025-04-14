@@ -694,6 +694,73 @@ modules:
       #- 1.3.6.1.4.1.2011.6.3.5.1.1.4          # hwMemoryDevRawSliceUsed 每块板上已占用的raw slice内存总量
 ```
 
+#### 采集 ARP 信息表
+
+```yaml
+# 参考：https://info.support.huawei.com/info-finder/tool/zh/enterprise/mib/ce8850-64cq-ei-vid-262063404
+modules:
+  ip-mib:
+    walk:
+      # "ipNetToPhysicalTable"  该表用于记录地址转换表（ARP和ND），包含IP地址到物理地址的关系
+      # 1.3.6.1.2.1.4.35.1.1  # ipNetToPhysicalIfIndex, 接口的索引值, 与I F-MIB::ifIndex 相同
+      # 1.3.6.1.2.1.4.35.1.2  # ipNetToPhysicalNetAddressType, IP地址类型。INTEGER{unknown(0),ipv4(1),ipv6(2),ipv4z(3),ipv6z(4),dns(16)}
+      # 1.3.6.1.2.1.4.35.1.3  # ipNetToPhysicalNetAddress, IP地址 OCTET STRING{(0,255)}
+      # 1.3.6.1.2.1.4.35.1.4  # ipNetToPhysicalPhysAddress, MAC地址 OCTET STRING{(0,65535)}
+      # 1.3.6.1.2.1.4.35.1.5  # ipNetToPhysicalLastUpdated, 表项最后一次更新的系统时间
+      # 1.3.6.1.2.1.4.35.1.6  # ipNetToPhysicalType，ARP映射表项的类型 INTEGER{other(1),invalid(2),dynamic(3),static(4),local(5)}
+      # 1.3.6.1.2.1.4.35.1.7  # ipNetToPhysicalState, 邻居可达性探测的状态,INTEGER{reachable(1),stale(2),delay(3),probe(4),invalid(5),unknown(6),incomplete(7)}
+      # 1.3.6.1.2.1.4.35.1.8  # ipNetToPhysicalRowStatus, 表示行状态。
+
+      # 该表的索引是 ipNetToPhysicalIfIndex、ipNetToPhysicalNetAddress、ipNetToPhysicalNetAddressType, 是一个复合索引
+      - "IP-MIB::ipNetToPhysicalTable"    # 1.3.6.1.2.1.4.35 
+
+    max_repetitions: 50   # 使用GET/GETBULK,一次可以请求的最大objects。值为60时，一个snmp resposne udp包有可能 >1500byte,不建议过大。默认为25。
+    retries: 3
+    timeout: 5s           # 每个SNMP request的超时时间, defaults to 5s.
+
+    lookups:    # 针对Table类型的 OID 做标签‘插入/修改’操作
+      - source_indexes: [ipNetToPhysicalIfIndex]
+        lookup: IF-MIB::ifName             # 1.3.6.1.2.1.31.1.1.1.1, 接口名称
+      - source_indexes: [ipNetToPhysicalIfIndex]
+        lookup: IF-MIB::ifAlias            # 1.3.6.1.2.1.31.1.1.1.18, 接口自定义描述信息
+
+      - source_indexes: [ipNetToPhysicalIfIndex,ipNetToPhysicalNetAddress]
+        lookup: IP-MIB::ipNetToPhysicalType
+
+    overrides:
+      ipNetToPhysicalIfIndex:
+        ignore: true            # 丢弃metric: ipNetToPhysicalIfIndex{}
+      ipNetToPhysicalNetAddressType:
+        ignore: true
+      ipNetToPhysicalNetAddress:
+        ignore: true
+      ipNetToPhysicalLastUpdated:
+        ignore: true
+      ipNetToPhysicalType:
+        ignore: true            # 丢弃metric
+      ipNetToPhysicalState:
+        ignore: true
+      ipNetToPhysicalRowStatus:
+        ignore: true
+
+    filters:
+      # 注意： 该过滤器不生效，原因未知。通过抓取Job的`metric_relabel_configs`来丢弃metric
+      dynamic:
+        - oid: 1.3.6.1.2.1.4.35.1.6  # ipNetToPhysicalType,
+          targets:
+            - 1.3.6.1.2.1.4.35.1.1  # ipNetToPhysicalIfIndex, 接口的索引值, 与IF-MIB中的ifIndex值所指定接口相同
+            - 1.3.6.1.2.1.4.35.1.2  # ipNetToPhysicalNetAddressType， IP地址类型。
+            - 1.3.6.1.2.1.4.35.1.3  # ipNetToPhysicalNetAddress, IP地址 OCTET STRING{(0,255)}
+            - 1.3.6.1.2.1.4.35.1.4  # ipNetToPhysicalPhysAddress，MAC地址 OCTET STRING{(0,65535)}
+            - 1.3.6.1.2.1.4.35.1.5  # ipNetToPhysicalLastUpdated，表项最后一次更新的系统时间
+            - 1.3.6.1.2.1.4.35.1.6  # ipNetToPhysicalType，ARP映射表项的类型 INTEGER{other(1),invalid(2),dynamic(3),static(4),local(5)}
+            - 1.3.6.1.2.1.4.35.1.7  # ipNetToPhysicalState, 表示邻居可达性探测的状态
+            - 1.3.6.1.2.1.4.35.1.8  # ipNetToPhysicalRowStatus, 表示行状态。
+          values: ["1","3","4","5"]     # 丢弃值 invalid(2), 即 无效的mac地址（00:00:00:00:00:00）
+```
+
+
+
 #### 采集 MAC地址表 FdbTable
 
 `generator-bridge-mib.yaml`:
