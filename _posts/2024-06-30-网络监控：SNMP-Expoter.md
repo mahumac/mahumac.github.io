@@ -888,10 +888,12 @@ scrape_configs:
         target_label: __param_target
       - source_labels: ["__param_target"]
         target_label: instance
+      - source_labels: ["auth"]
+       target_label: __param_auth          # 将 标签'auth'的值传递给snmp_exporter
       - source_labels: ["module"]
-        target_label: __param_module
+        target_label: __param_module       # 将 标签'module'的值传递给snmp_exporter
       - target_label: __address__
-        replacement: 127.0.0.19:9116        # snmp_exporter服务IP和端口
+        replacement: 127.0.0.19:9116       # snmp_exporter服务IP和端口
       - target_label: prober
         replacement: HK1
 
@@ -907,8 +909,10 @@ scrape_configs:
         target_label: __param_target
       - source_labels: ["__param_target"]
         target_label: instance
+      - source_labels: ["auth"]
+       target_label: __param_auth          # 将 标签'auth'的值传递给snmp_exporter
       - source_labels: ["module"]
-        target_label: __param_module
+        target_label: __param_module       # 将 标签'module'的值传递给snmp_exporter
       - target_label: __address__
         replacement: 127.0.0.1:9116        # snmp_exporter服务IP和端口
       - target_label: prober
