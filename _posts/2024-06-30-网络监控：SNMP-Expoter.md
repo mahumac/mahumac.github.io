@@ -880,17 +880,17 @@ scrape_configs:
     scrape_interval: 1m
     scrape_timeout: 1m
     file_sd_configs:
-      - files: ["/etc/prometheus/file_sd_config.d/snmp-*.yaml"]
+      - files: ["/etc/prometheus/file_sd_config.d/snmp_1m*.yaml"]
         refresh_interval: 1m
     metrics_path: /snmp
     relabel_configs:
-      - source_labels: ["__address__"]
+      - source_labels: [__address__]
         target_label: __param_target
-      - source_labels: ["__param_target"]
+      - source_labels: [__param_target]
         target_label: instance
-      - source_labels: ["auth"]
+      - source_labels: [auth]
        target_label: __param_auth          # 将 标签'auth'的值传递给snmp_exporter
-      - source_labels: ["module"]
+      - source_labels: [module]
         target_label: __param_module       # 将 标签'module'的值传递给snmp_exporter
       - target_label: __address__
         replacement: 127.0.0.19:9116       # snmp_exporter服务IP和端口
@@ -901,17 +901,17 @@ scrape_configs:
     scrape_interval: 5m
     scrape_timeout: 5m
     file_sd_configs:
-      - files: ["/etc/prometheus/file_sd_config.d/snmp-*.yaml"]
+      - files: ["/etc/prometheus/file_sd_config.d/snmp_5m*.yaml"]
         refresh_interval: 1m
     metrics_path: /snmp
     relabel_configs:
-      - source_labels: ["__address__"]
+      - source_labels: [__address__]
         target_label: __param_target
-      - source_labels: ["__param_target"]
+      - source_labels: [__param_target]
         target_label: instance
-      - source_labels: ["auth"]
+      - source_labels: [auth]
        target_label: __param_auth          # 将 标签'auth'的值传递给snmp_exporter
-      - source_labels: ["module"]
+      - source_labels: [module]
         target_label: __param_module       # 将 标签'module'的值传递给snmp_exporter
       - target_label: __address__
         replacement: 127.0.0.1:9116        # snmp_exporter服务IP和端口
@@ -931,7 +931,7 @@ scrape_configs:
 
 按照不同的采集频率来拆分job:
 
-新建 `/etc/prometheus/file_sd_config.d/snmp-1m-huawei.yaml`文件，对应Prometheus中的1分钟轮询 Job，添加需要收集snmp信息的设备
+新建 `/etc/prometheus/file_sd_config.d/snmp_1m-huawei.yaml`文件，对应Prometheus中的1分钟轮询 Job，添加需要收集snmp信息的设备
 
 ```yaml
 # 1分钟轮询的模块, 注意`module` 参数中是使用逗号分隔的模块名称列表，不是数组
@@ -945,7 +945,7 @@ scrape_configs:
     - 10.10.1.1
 ```
 
-新建 `/etc/prometheus/file_sd_config.d/snmp-5m-huawei.yaml`文件，对应Prometheus中的5分钟轮询 Job，添加需要收集snmp信息的设备
+新建 `/etc/prometheus/file_sd_config.d/snmp_5m-huawei.yaml`文件，对应Prometheus中的5分钟轮询 Job，添加需要收集snmp信息的设备
 
 ```yaml
 # 5分钟轮询的模块,注意`module` 参数中是使用逗号分隔的模块名称列表，不是数组
