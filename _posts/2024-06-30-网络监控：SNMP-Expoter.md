@@ -376,7 +376,7 @@ modules:
       - ifHighSpeed             # 1.3.6.1.2.1.31.1.1.1.15,  接口当前带宽,单位为1,000,000 bit/s
       - ifAlias                 # 1.3.6.1.2.1.31.1.1.1.18,  由网络管理员指定的接口别名/备注
 
-    max_repetitions: 50   # 使用GET/GETBULK,一次可以请求的最大objects。值为60时，一个snmp resposne udp包有可能 >1500byte,不建议过大。默认为25。
+    max_repetitions: 30   # 使用GET/GETBULK,一次可以请求的最大objects。值为60时，一个snmp resposne udp包有可能 >1500byte,不建议过大。默认为25。
     retries: 3
     timeout: 5s           # 每个SNMP request的超时时间, defaults to 5s.
 
@@ -714,7 +714,7 @@ modules:
       # 该表的索引是 ipNetToPhysicalIfIndex、ipNetToPhysicalNetAddress、ipNetToPhysicalNetAddressType, 是一个复合索引
       - "IP-MIB::ipNetToPhysicalTable"    # 1.3.6.1.2.1.4.35 
 
-    max_repetitions: 50   # 使用GET/GETBULK,一次可以请求的最大objects。值为60时，一个snmp resposne udp包有可能 >1500byte,不建议过大。默认为25。
+    max_repetitions: 30   # 使用GET/GETBULK,一次可以请求的最大objects。值为60时，一个snmp resposne udp包有可能 >1500byte,不建议过大。默认为25。
     retries: 3
     timeout: 5s           # 每个SNMP request的超时时间, defaults to 5s.
 
@@ -784,7 +784,7 @@ modules:
       - "BRIDGE-MIB::dot1dTpFdbTable"       # 1.3.6.1.2.1.17.4.3, FDB表（mac转发表），该表的索引是`dot1dTpFdbAddress`(即mac地址)
       - "BRIDGE-MIB::dot1dBasePortTable"     # 1.3.6.1.2.1.17.1.4, 该表的索引是 `dot1dBasePort`。
 
-    max_repetitions: 50   # 使用GET/GETBULK,一次可以请求的最大objects。值为60时，一个snmp resposne udp包有可能 >1500byte,不建议过大。默认为25。
+    max_repetitions: 30   # 使用GET/GETBULK,一次可以请求的最大objects。值为60时，一个snmp resposne udp包有可能 >1500byte,不建议过大。默认为25。
     retries: 3
     timeout: 5s           # 每个SNMP request的超时时间, defaults to 5s.
 
