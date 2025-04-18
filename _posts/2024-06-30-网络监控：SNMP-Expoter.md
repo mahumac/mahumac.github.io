@@ -918,12 +918,22 @@ scrape_configs:
       - target_label: prober
         replacement: HK1
      metric_relabel_configs:
-      - source_labels: ["ipNetToPhysicalType"]
-        regex: '2'
+      - source_labels: [ipNetToPhysicalType]
+        regex: '2'          # 丢弃无效mac地址
         action: drop
-      - source_labels: ["ipNetToPhysicalPhysAddress"]
+      - source_labels: [ipNetToPhysicalPhysAddress]
         regex: '00:00:00:00:00:00'
         action: drop
+      - source_labels: [ipNetToPhysicalPhysAddress]
+        regex: '(.*):(.*):(.*):(.*):(.*):(.*)'
+        replacement: '$1$2$3$4$5$6'      # 将mac地址格式由'11:22:33:44:55:66' 变为 '112233445566'
+        action: replace
+        target_label: ipNetToPhysicalPhysAddress
+      - source_labels: [dot1dTpFdbAddress]
+        regex: '(.*):(.*):(.*):(.*):(.*):(.*)'
+        replacement: '$1$2$3$4$5$6'      # 将mac地址格式由'11:22:33:44:55:66' 变为 '112233445566'
+        action: replace
+        target_label: dot1dTpFdbAddress
 
 ```
 
