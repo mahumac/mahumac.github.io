@@ -327,10 +327,10 @@ snmpwalk --help
 
 ```yaml
 auths:
-  public_v2:            # 认证模块名称，可以任意自定义，如：default、huawei、h3c
+  auth_1:            # 认证模块名称，可以任意自定义，如：default、huawei、h3c
     version: 2          # snmp v2c版本
     community: public   # snmp 团体名，注意修改为自己的。
-  huawei:
+  auth_2:
     version: 2
     community: public
 
@@ -464,7 +464,8 @@ modules:
             - 1.3.6.1.2.1.31.1.1.1.10   # ifHCOutOctets
             - 1.3.6.1.2.1.31.1.1.1.15   # ifHighSpeed
             - 1.3.6.1.2.1.31.1.1.1.18   # ifAlias
-          values: ["(?i)^(Tunnel|in|loop|Vlanif)"]  # '(?i)^(?!vlanif|tunnel)|vlanif(1|12)$'  精确匹配vlanif1、vlanif12,排除其他vlanif|tunnel开头的字符串
+          # '(?i)^(?!vlanif|tunnel)|vlanif(1|12)$'  精确匹配vlanif1、vlanif12,排除其他vlanif|tunnel开头的字符串 
+          values: ["(?i)^(?!vlanif|tunnel)|vlanif(1|12)$"]  # (注意：此表达式无效，目前golang不支持否定预查 '?!')
 
         #- oid: 1.3.6.1.2.1.31.1.1.1.18      # ifAlias , 自定义的接口描述信息
         #  targets:
@@ -702,7 +703,7 @@ modules:
   ip-mib:
     walk:
       # "ipNetToPhysicalTable"  该表用于记录地址转换表（ARP和ND），包含IP地址到物理地址的关系
-      # 1.3.6.1.2.1.4.35.1.1  # ipNetToPhysicalIfIndex, 接口的索引值, 与I F-MIB::ifIndex 相同
+      # 1.3.6.1.2.1.4.35.1.1  # ipNetToPhysicalIfIndex, 接口的索引值, 与IF-MIB::ifIndex 相同
       # 1.3.6.1.2.1.4.35.1.2  # ipNetToPhysicalNetAddressType, IP地址类型。INTEGER{unknown(0),ipv4(1),ipv6(2),ipv4z(3),ipv6z(4),dns(16)}
       # 1.3.6.1.2.1.4.35.1.3  # ipNetToPhysicalNetAddress, IP地址 OCTET STRING{(0,255)}
       # 1.3.6.1.2.1.4.35.1.4  # ipNetToPhysicalPhysAddress, MAC地址 OCTET STRING{(0,65535)}
@@ -889,7 +890,7 @@ scrape_configs:
       - source_labels: [__param_target]
         target_label: instance
       - source_labels: [auth]
-       target_label: __param_auth          # 将 标签'auth'的值传递给snmp_exporter
+        target_label: __param_auth         # 将 标签'auth'的值传递给snmp_exporter
       - source_labels: [module]
         target_label: __param_module       # 将 标签'module'的值传递给snmp_exporter
       - target_label: __address__
@@ -910,7 +911,7 @@ scrape_configs:
       - source_labels: [__param_target]
         target_label: instance
       - source_labels: [auth]
-       target_label: __param_auth          # 将 标签'auth'的值传递给snmp_exporter
+        target_label: __param_auth         # 将 标签'auth'的值传递给snmp_exporter
       - source_labels: [module]
         target_label: __param_module       # 将 标签'module'的值传递给snmp_exporter
       - target_label: __address__
