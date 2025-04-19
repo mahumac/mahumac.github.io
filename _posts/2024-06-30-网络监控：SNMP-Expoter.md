@@ -875,10 +875,44 @@ systemctl restart snmp_exporter.service
 - 根据不同型号、不同厂家的设备、设备性能来对应不同的module ，拆分为多个配置文件 或 job
 - 根据设备 或者 module的采集时间不同，拆分为多个配置文件 或 job
 
+
+
+举例：按照不同的采集频率来拆分job:
+
+新建 `/etc/prometheus/file_sd_config.d/snmp_1m-huawei.yaml`文件，对应Prometheus中的1分钟轮询 Job，添加需要收集snmp信息的设备
+
+```yaml
+# 1分钟轮询的模块, 注意`module` 参数中是使用逗号分隔的模块名称列表，不是数组
+- labels:
+    auth: "public_v2"
+    model: "CE8800"
+    region: "BJ"
+    module: "if-mib,snmpv2-mib"      # 名称对应generator.yaml中的module名称
+  targets:
+    - 192.168.1.1;BJ-Spine-CE8850    # 格式'<IP>;<HOSTNAME>'
+    - 10.10.1.1;BJ-Leaf-CE6865
+```
+
+新建 `/etc/prometheus/file_sd_config.d/snmp_5m-huawei.yaml`文件，对应Prometheus中的5分钟轮询 Job，添加需要收集snmp信息的设备
+
+```yaml
+# 5分钟轮询的模块,注意`module` 参数中是使用逗号分隔的模块名称列表，不是数组
+- labels:
+    auth: "public_v2"
+    model: "CE8800"
+    region: "BJ"
+    module: "ip-mib,bridge-mib,huawei-entity-extent-mib,huawei-flash-man-mib"
+  targets:
+    - 192.168.1.1;BJ-Spine-CE8850
+    - 10.10.1.1;BJ-Leaf-CE6865
+```
+
+Prometheus Job配置：
+
 ```yaml
 scrape_configs:
 - job_name: "snmp-1"
-    scrape_interval: 1m
+    scrape_interval: 1m    # 1分钟轮询
     scrape_timeout: 1m
     file_sd_configs:
       - files: ["/etc/prometheus/file_sd_config.d/snmp_1m*.yaml"]
@@ -886,9 +920,12 @@ scrape_configs:
     metrics_path: /snmp
     relabel_configs:
       - source_labels: [__address__]
+        regex: '(.*);.*'                    # 提取target模板中的第1段，instance
         target_label: __param_target
       - source_labels: [__param_target]
         target_label: instance
+      - source_labels: [__address__]
+        regex: '.*;(.*)'                    # 提取target模板中的第2段，hostname
       - source_labels: [auth]
         target_label: __param_auth         # 将 标签'auth'的值传递给snmp_exporter
       - source_labels: [module]
@@ -899,7 +936,7 @@ scrape_configs:
         replacement: HK1
 
   - job_name: "snmp-2"
-    scrape_interval: 5m
+    scrape_interval: 5m    # 5分钟轮询
     scrape_timeout: 5m
     file_sd_configs:
       - files: ["/etc/prometheus/file_sd_config.d/snmp_5m*.yaml"]
@@ -907,8 +944,12 @@ scrape_configs:
     metrics_path: /snmp
     relabel_configs:
       - source_labels: [__address__]
+        regex: '(.*);.*'                    # 提取target模板中的第1段，instance
         target_label: __param_target
       - source_labels: [__param_target]
+        target_label: instance
+      - source_labels: [__address__]
+        regex: '.*;(.*)'                    # 提取target模板中的第2段，hostname
         target_label: instance
       - source_labels: [auth]
         target_label: __param_auth         # 将 标签'auth'的值传递给snmp_exporter
@@ -920,54 +961,21 @@ scrape_configs:
         replacement: HK1
      metric_relabel_configs:
       - source_labels: [ipNetToPhysicalType]
-        regex: '2'          # 丢弃无效mac地址
+        regex: '2'          # 丢弃无效mac地址，如 '00:00:00:00:00:00'
         action: drop
       - source_labels: [ipNetToPhysicalPhysAddress]
         regex: '00:00:00:00:00:00'
         action: drop
       - source_labels: [ipNetToPhysicalPhysAddress]
         regex: '(.*):(.*):(.*):(.*):(.*):(.*)'
-        replacement: '$1$2$3$4$5$6'      # 将mac地址格式由'11:22:33:44:55:66' 变为 '112233445566'
+        replacement: '$1$2$3$4$5$6'      # 将mac地址格式由'11:22:33:44:55:66' 修改为 '112233445566'
         action: replace
         target_label: ipNetToPhysicalPhysAddress
       - source_labels: [dot1dTpFdbAddress]
         regex: '(.*):(.*):(.*):(.*):(.*):(.*)'
-        replacement: '$1$2$3$4$5$6'      # 将mac地址格式由'11:22:33:44:55:66' 变为 '112233445566'
+        replacement: '$1$2$3$4$5$6'      # 将mac地址格式由'11:22:33:44:55:66' 修改为 '112233445566'
         action: replace
         target_label: dot1dTpFdbAddress
-
-```
-
-
-
-按照不同的采集频率来拆分job:
-
-新建 `/etc/prometheus/file_sd_config.d/snmp_1m-huawei.yaml`文件，对应Prometheus中的1分钟轮询 Job，添加需要收集snmp信息的设备
-
-```yaml
-# 1分钟轮询的模块, 注意`module` 参数中是使用逗号分隔的模块名称列表，不是数组
-- labels:
-    auth: "public_v2"
-    model: "CE8800"
-    region: "BJ"
-    module: "IF-MIB,SNMPv2-MIB"  # 名称对应generator.yaml中的module名称
-  targets:
-    - 192.168.1.1
-    - 10.10.1.1
-```
-
-新建 `/etc/prometheus/file_sd_config.d/snmp_5m-huawei.yaml`文件，对应Prometheus中的5分钟轮询 Job，添加需要收集snmp信息的设备
-
-```yaml
-# 5分钟轮询的模块,注意`module` 参数中是使用逗号分隔的模块名称列表，不是数组
-- labels:
-    auth: "public_v2"
-    model: "CE8800"
-    region: "BJ"
-    module: "HUAWEI-ENTITY-EXTENT-MIB,HUAWEI-FLASH-MAN-MIB" # 名称对应generator.yaml中的module名称
-  targets:
-    - 192.168.1.1
-    - 10.10.1.1
 ```
 
 
