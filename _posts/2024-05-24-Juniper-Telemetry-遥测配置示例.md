@@ -159,7 +159,7 @@ Telegraf 的配置文件，位于 `/etc/telegraf/telegraf.conf`
   listen = ":9273"
   path = "/metrics"
   
-  expiration_interval = "5s" # metric过期时间. 0 == no expiration
+  expiration_interval = "5s" # metric过期时间. 0 == no expiration，应该大于等于 prometheus job scrape_interval 时间
   export_timestamp = true    # 将timestamp 附加到metrics, 让prometheus以该时间戳为准（不使用prometheus的job scrape时间戳）
 ```
 
