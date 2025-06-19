@@ -9,7 +9,7 @@ tags: [Prometheus, Blackbox]
 
 Blackbox Exporter是Prometheus社区提供的官方黑盒监控解决方案，其允许用户通过：HTTP、HTTPS、DNS、TCP以及ICMP的方式对网络进行探测。
 
-# 下载安装 Blackbox Exporter
+##  下载安装 Blackbox Exporter
 
 ```bash
 cd ~
@@ -54,7 +54,7 @@ firewall-cmd --add-port=9115/tcp --permanent
 firewall-cmd --reload
 ```
 
-## ICMP 权限
+### ICMP 权限
 
 ICMP 探测需要提升的权限才能运行：
 
@@ -66,9 +66,9 @@ ICMP 探测需要提升的权限才能运行：
   sysctl  net.ipv4.ping_group_range = 0  2147483647
   ```
 
-# ICMP 监控
+## ICMP 监控
 
-## blackbox.yml 配置
+### blackbox.yml 配置
 
 ```yaml
 modules:
@@ -83,7 +83,7 @@ modules:
       ttl: 5
 ```
 
-# 与Prometheus集成
+## 与Prometheus集成
 
 假设有三个机房，分别位于GZ、SH、BJ。在每个机房都各部署一台blackbox_exporter 探针（Prober）,监控100+个目标（targets）:
 
@@ -143,7 +143,7 @@ scrape_configs:
 
 若**在 Prometheus 中为每个 Blackbox _exporter 定义具有所有目标 （URL） 的作业**，则 需要总共将近 20+ 个 Job 和 2000 多行配置。
 
-## 使用 单个 Job 访问多个模块和目标
+### 使用 单个 Job 访问多个模块和目标
 
 正如上面提供的 Job 示例中所看到的，其中模块名称、目标和导出器的地址是静态的，因此想要更改某些内容时，则需要更改整个配置。
 
@@ -186,7 +186,7 @@ scrape_configs:
 
 第一个重要部分是`file_sd_configs`自动发现服务，这意味着可以动态更改文件的内容，而无需重新加载 Prometheus 服务器。
 
-## icmp_targets.yml 文件配置
+### icmp_targets.yml 文件配置
 
 ```yaml
 ###################################################################
@@ -305,9 +305,9 @@ scrape_configs:
 
 
 
-# 查询 ICMP 丢包
+## 查询 ICMP Loss/RTT/Jitter
 
-## 使用PromQL 计算 ICMP 丢包
+### 使用PromQL 计算 ICMP 丢包
 
 * 通过metric   `probe_success`查询 icmp ping 是否成功 (success = 1 , faile = 0)
 
@@ -323,7 +323,7 @@ probe_success{job=~"blackbox_icmp.*"}
 
 
 
-##  使用PromQL 计算 ICMP RTT
+###  使用PromQL 计算 ICMP RTT
 
 * 通过以下以下PromQL, 计算60秒内的 平均 icmp rtt 值。
 
@@ -372,7 +372,7 @@ sum_over_time(
 sum_over_time(probe_success{job=~"blackbox_icmp.*"}[$interval])
 ```
 
-## 计算 ICMP Jitter
+### 计算 ICMP Jitter
 
 ```bash
 # 计算 ICMP抖动 > 15ms 的IP
@@ -385,7 +385,7 @@ stddev_over_time(
  ) > 0.015
 ```
 
-## 使用 Record 规则 计算 ICMP 丢包
+### 使用 Record 规则 计算 ICMP 丢包
 
 也可以使用 promtheus 记录规则来计算 ICMP 丢包情况：
 
