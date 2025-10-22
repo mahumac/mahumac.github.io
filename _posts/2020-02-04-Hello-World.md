@@ -71,29 +71,33 @@ Blog 就这么开通了。
 
 需要特别提醒评论功能的配置，有 disqus, utterances, giscus 三种方式可选。选择的方式不同，配置的方式也会不同。
 
+我选择的是 giscus ，进入 [giscus](https://giscus.app/zh-CN)，填写仓库等信息，并按要求进行一系列简单的配置。结束后中页面底端会获取到 repo, repo_id, category, category_id 等信息，填入  `_config.yml`。
+
 ```yaml
 comments:
-  active: # The global switch for posts comments, e.g., 'disqus'.  Keep it empty means disable
-  # The active options are as follows:
+  # Global switch for the post-comment system. Keeping it empty means disabled.
+  provider: giscus  # [disqus | utterances | giscus]
+  # The provider options are as follows:
   disqus:
-    shortname: # fill with the Disqus shortname. › <https://help.disqus.com/en/articles/1717111-what-s-a-shortname>
-  # utterances settings › <https://utteranc.es/>
+    shortname: # fill with the Disqus shortname. › https://help.disqus.com/en/articles/1717111-what-s-a-shortname
+  # utterances settings › https://utteranc.es/
   utterances:
     repo: # <gh-username>/<repo>
     issue_term: # < url | pathname | title | ...>
-  # Giscus options › <https://giscus.app>
+  # Giscus options › https://giscus.app
   giscus:
     repo: # <gh-username>/<repo>
-    repo_id:
-    category:
-    category_id:
-    mapping: # optional, default to 'pathname'
-    input_position: # optional, default to 'bottom'
-    lang: # optional, default to the value of `site.lang`
-    reactions_enabled: # optional, default to the value of `1`
+    repo_id: ''
+    category: ''
+    category_id: ''
+    mapping: 'pathname' # optional, default to 'pathname'
+    strict: # optional, default to '0'
+    input_position: 'top' # optional 'top/bottom', default to 'bottom'
+    lang: zh-CN # optional, default to the value of `site.lang`
+    reactions_enabled: '1' # optional, default to the value of `1`
 ```
 
-我选择的是 giscus ，进入 [giscus](https://giscus.app/zh-CN)，填写仓库等信息，并按要求进行一系列简单的配置。结束后中页面底端会获取到 repo, repo_id, category, category_id 等信息，填入  `_config.yml`。
+
 
 ## 部署站点
 
