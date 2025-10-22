@@ -103,13 +103,13 @@ comments:
 
 部署前需检查 `_config.yml` 文件配置正确（Jekyll 的核心配置文件），重点确认两个关键参数：
 
-- `url`：通常是网站的根域名，如 GitHub Pages 的 `https://[username].github.io`，确保网站资源引用和跳转的 base URL 无误。
+- `url`：通常是网站的根域名，如 GitHub Pages 的 `https://[username].github.io`
 
-- `baseurl`
+- `baseurl`: 仅在将您的网站托管在子目录中时才需要
 
   仅在两种场景下需要设置：
 
-  - 场景 1：部署为 “[GitHub Pages](https://docs.github.com/en/pages/getting-started-with-github-pages/what-is-github-pages#types-of-github-pages-sites)” 且不使用自定义域名；
+  - 场景 1：[**GitHub Pages**](https://pages.github.com/) 上托管的[项目站点](https://docs.github.com/en/pages/getting-started-with-github-pages/about-github-pages#types-of-github-pages-sites) ，且不使用自定义域名；
 
   - 场景 2：网站部署在非 GitHub Pages 的服务器上，且需要通过 “baseurl” 访问，如: `https://your-server.com/project-name`
 
@@ -143,13 +143,13 @@ $ JEKYLL_ENV=production bundle exec jekyll b
 
 ## 写下第一篇文章
 
-在 *_posts 文件夹内新建一个 markdown 文件，命名格式为`YYYY-MM-DD-title.md`yyyy-mm-dd-hello world.md，例如 `2020-10-10-Hello World.md`，输入以下内容。
+在 *_posts 文件夹内新建一个 markdown 文件，命名格式为`YYYY-MM-DD-title.md`，例如 `2020-10-10-Hello World.md`，输入以下内容。
 
 ```markdown
 ---
 title: hello world
 date: 2020-10-10 21:00:00 +0800
-categories: []
+categories: [TOP_CATEGORY, SUB_CATEGORY]
 tags: []
 pin: false
 ---
@@ -159,5 +159,5 @@ hello world!
 
 上面使用 `---` 隔开的内容是这份文件的元数据，需要包含标题、日期、类别、标签等信息。
 
-
+帖子的**布局**已默认设置为`post`，因此无需在 Front Matter 块中添加**layout**变量。
 
