@@ -163,3 +163,7 @@ hello world!
 
 帖子的**布局**已默认设置为`post`，因此无需在 Front Matter 块中添加**layout**变量。
 
+## 升级站点
+
+参考：[Upgrade Guide · cotes2020/jekyll-theme-chirpy Wiki](https://github.com/cotes2020/jekyll-theme-chirpy/wiki/Upgrade-Guide)
+
