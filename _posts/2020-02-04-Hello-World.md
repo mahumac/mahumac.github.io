@@ -127,7 +127,7 @@ comments:
 
 3）回到本地仓库，将任何提交推送到 GitHub 以触发`Actions`工作流。
 
-在存储库的Actions选项卡中，就可以看到`Build and Deploy`工作流正在运行。构建完成并成功后，将自动部署站点。
+在存储库的 `Actions` 选项卡中，就可以看到`Build and Deploy`工作流正在运行。构建完成并成功后，将自动部署站点。
 
 等待几分钟，Deployments 完成后就可以通过  GitHub 提供的 URL 进入自己的博客站点啦！
 
