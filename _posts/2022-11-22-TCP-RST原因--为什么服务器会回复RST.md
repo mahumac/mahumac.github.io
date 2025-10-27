@@ -93,7 +93,7 @@ RST 有什么用途？  在 TCP 连接发生异常情况时可以通过发送 RS
 
 客户端发送`ClientHello`包后（https, TLS握手阶段），中间的旁路设备阻断了客户端，代替服务器向客户端回复了RST报文（但未向服务器发送RST），导致服务器认为会话未中断，还在继续发送后续`ServerHello`数据包：
 
-<img src="./image/2022-11-22-TCP-RST原因--为什么服务器会回复RST.assets/图片9.png" alt="img" style="zoom: 67%;" />
+<img src="../images/2022-11-22-TCP-RST原因--为什么服务器会回复RST.assets/图片9.png" alt="img" style="zoom: 67%;" />
 
 总之，如果会话过程中出现RST包，需要考虑该RST包是否由中间旁路阻断设备发出，可以通过该RST包的RST位、序列号、IP TTL等方式，或是直接多点抓包对比分析，综合判断。 
 

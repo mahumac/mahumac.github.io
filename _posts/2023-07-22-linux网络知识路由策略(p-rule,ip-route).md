@@ -87,7 +87,7 @@ ip rule , ip route 属于iproute2这个网络管理工具包中的命令。
 
 **iptables**其实**不是真正的防火墙**，它只是一个管理工具，用户通过iptables管理工具，将用户的安全设定执行到对应的"安全框架"中，这个"安全框架"才是**真正的防火墙**，这个框架的名字叫**netfilter。**
 
-<img src="./image/2023-07-22-linux网络知识路由策略(p-rule,ip-route).assets/v2-cb9d8ca81ec705e15f1f5f326421c16b_1440w.jpg" alt="img" style="zoom:80%;" />
+<img src="../images/2023-07-22-linux网络知识路由策略(p-rule,ip-route).assets/v2-cb9d8ca81ec705e15f1f5f326421c16b_1440w.jpg" alt="img" style="zoom:80%;" />
 
 **注：图中 “路由判断” 就是使用ip rule，ip route设置的规则，其中ip route配置的路由表服务于ip rule配置的规则。**
 
