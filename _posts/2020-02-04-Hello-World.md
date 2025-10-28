@@ -39,7 +39,7 @@ Blog 就这么开通了。
 
 根据 [Chirpy 的官方文档]([Getting Started | Chirpy](https://chirpy.cotes.page/posts/getting-started/))，需要先在 github 中对 [https://github.com/cotes2020/chirpy-starter](https://github.com/cotes2020/chirpy-starter) 选择 `Use this template` 来创建一个新仓库，并将这个仓库命名为 `githubusername.github.io` 。
 
-别的主题方法稍有差别，具体看文档。fork 仓库也是常见的方法。
+
 
 ## 创建站点存储库
 
@@ -101,7 +101,11 @@ comments:
 
 ## 部署站点
 
-部署前需检查 `_config.yml` 文件配置正确（Jekyll 的核心配置文件），重点确认两个关键参数：
+> [!Tip]
+>
+> 部署前需检查 `_config.yml` 文件配置正确（Jekyll 的核心配置文件）
+
+重点确认两个关键参数：
 
 - `url`：通常是网站的根域名，如 GitHub Pages 的 `https://[username].github.io`
 
