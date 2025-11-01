@@ -147,6 +147,26 @@ $ JEKYLL_ENV=production bundle exec jekyll b
 
 默认情况下生成的站点文件放置在源项目的根目录中
 
+### Chirpy目录结构
+
+Chirpy的部分文件架构如下，了解这些将有助于后续的文件修改：
+
+```tex
+/                (root根目录)
+├─ _data         (存储了部分网页配置)
+│   └─locales    (语言本地化)
+├─ _includes     (为不同功能预先写好的html模块，可以在使用时直接include)
+├─ _javascript
+├─ _layouts      (不同的layout预设以供页面选择)
+├─ _plugins
+├─ _posts        (文章存储的位置)
+├─ _sass         (CSS文件)
+├─ _tabs         (Chirpy创建的Collection，对应侧边栏的标签)
+├─ assets        (网页所需的素材)
+├─ _config.yml   (全局配置文件)
+└─ index.html
+```
+
 ## 写下第一篇文章
 
 在 *_posts 文件夹内新建一个 markdown 文件，命名格式为`YYYY-MM-DD-title.md`，例如 `2020-10-10-Hello World.md`，输入以下内容。
@@ -158,6 +178,7 @@ date: 2020-10-10 21:00:00 +0800
 categories: [TOP_CATEGORY, SUB_CATEGORY]
 tags: []
 pin: false
+math: true   # 数学公式默认是关闭的
 ---
 
 hello world!
