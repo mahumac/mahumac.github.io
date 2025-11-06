@@ -125,7 +125,7 @@ foreach ($user in $alladuser)
     $Department = Get-ADUser $user -Properties * | ForEach-Object{ $_.$Department }
     # 根据帐号DistinguishedName信息（所在OU路径），预先生成Per_Department信息
     $user_DN = (Get-aduser $user -Properties *).DistinguishedName
-    $split_DN = ( ( $user_DN -split "," ) -like "OU=*" ) -notlike "*四创集团*"  -replace( "OU=" , "")
+    $split_DN = ( ( $user_DN -split "," ) -like "OU=*" ) -notlike "*xx集团*"  -replace( "OU=" , "")
     $Per_Department = $split_DN[-1] + " " + $split_DN[-2]
     $Department_split = ($Department -split " ")[-1]
     $DayOfWeek = "1"
@@ -161,7 +161,7 @@ foreach ($user in $alladuser)
     #For 5:自动修改用户mail为"%username%@domain.com"
     ####################################################################################################
     $Mail = Get-ADUser $user -Properties * | ForEach-Object{ $_.Mail }
-    if ($Mail -like '' -or $mail -like "*strongsoft*")
+    if ($Mail -like '' -or $mail -like "*example.domain*")
     {
         Set-ADUser $user -EmailAddress $user@domain.com
         Write-Output "设置 账户 $chineseuserName($user) 邮件地址为：$user@domain.com" | Out-File -FilePath $ResultLog -Append
@@ -184,7 +184,7 @@ foreach ($user in $alladuser)
     ####################################################################################################
     #For 7:设置用户UPN名为"$user@domain.com"
     ####################################################################################################
-    if ($UPN -like "*strongsoft*" -or $UPN -like "*@in.domain.com")
+    if ($UPN -like "*example.domain*" -or $UPN -like "*@in.domain.com")
     {
         Set-ADUser $user -UserPrincipalName $user@domain.com
         Write-Output "修改用户 $chineseuserName($user) UPN名为：$user@domain.com" | Out-File -FilePath $ResultLog -Append
@@ -209,8 +209,8 @@ foreach ($user in $alladuser)
 
         重置密码过程请遵循以下原则：
             ○ 密码长度最少 8 位；
-            ○ 密码可使用最长时间 360天，过期需要更改密码；
-            ○ 强制密码历史 1个（不能使用之前最近使用的 1 个密码）；
+            ○ 密码可使用最长时间 360 天，过期需要更改密码；
+            ○ 强制密码历史 1 个（不能使用之前最近使用的 1 个密码）；
             ○ 密码符合复杂性需求（大写字母、小写字母、数字和符号四种中必须有三种、且不得包括用户名）
         "
         # 密码过期大于3天时，每周一、三、五，通知用户 (3 < $expirt_days ≤ 15)
@@ -237,7 +237,7 @@ foreach ($user in $alladuser)
 
         #####################################################################
         # 筛选$Mobile值为空、未被禁用、且密码未过期的帐号
-        #For 8:检测没有登记Mobile的用户,每周一发送微信通知
+        # For 8:检测没有登记Mobile的用户,每周一发送微信通知
         #####################################################################
         if ( (!$otherMailbox -or !$Mobile) -and $Enabled -and $expire_days -ge 0 )
         {
@@ -248,7 +248,7 @@ foreach ($user in $alladuser)
             ########################
             $Content =
             "亲爱的 $chineseuserName 同学：
-            你的邮箱 <$user@domain.com> 账号信息未登记完善，请登录 http://password.domain.com (建议使用电脑端登录)完善账号信息。
+            你的邮箱 <$user@domain.com> 账号信息未登记完善，请登录http://password.domain.com完善账号信息。
             以便在忘记密码或者账户被锁时可以自助重置密码或解锁账户。
                 (a) 完善您的备用邮箱、手机号码
                 (b) 配置您的个人认证安全问题及其答案
@@ -297,7 +297,7 @@ $WeChatMessage =
     -corpid $corpid `
     -corpsecret $corpsecret `
     -AgentId $AgentId `
-    -UserId "mhq" `
+    -UserId "admin_user" `
     -Content $WeChatMessage
 
 Write-Output "$WeChatMessage" | Out-File -FilePath $ResultLog -Append
