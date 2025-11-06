@@ -1,3 +1,4 @@
 User-agent: *
-
 Disallow: /norobots/
+Allow: /_posts/
+Allow: /images/
