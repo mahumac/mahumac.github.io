@@ -71,9 +71,50 @@ mkdir -p /etc/snmp_exporter
 cp snmp_exporter-${VERSION}*/snmp_exporter   /usr/local/bin/
 ```
 
+### 配置 Basic Auth ( web.yml ) (可选)
+
+添加 ` --web.config.file=web.yml ` 命令行 flag , 启用 Basic Auth 配置
+
+```bash
+mkdir -p -v /etc/node-exporter
+touch /etc/node-exporter/web.yml
+```
+
+使用 htpasswd(Apache 工具) 生成 bcrypt 密码 hash
+
+```bash
+# 安装工具 Debian/Ubuntu 系统
+sudo apt-get install apache2-utils
+
+# 安装工具 CentOS/RHEL 系统
+sudo yum install httpd-tools
+```
+
+生成bcrypt哈希（交互式输入密码的话，不需要`-b`参数）
+
+```bash
+htpasswd -nBb username password
+```
+
+输出结果:
+
+```bash
+root@prometheus:~# htpasswd -nBb username password
+username:$2y$05$2yQMDUTYHZlOzGfTm94mxegb5YXzw.jgfipC/l9canNG5yVq5nAXe  # << 输出结果
+```
+
+然后编辑 `/etc/node-exporter/web.yml`文件
+
+```bash
+# 编辑 web.yml 文件
+# 注意: 'username:'后面必须有空格
+basic_auth_users:
+  username: <the-plain-text-password>  
+```
+
 ### **添加systemd服务管理**
 
-> `--config.file`参数可以多次使用以加载多个文件，或者使用通配符，例如`snmp*.yaml`
+> `--config.file`参数可以多次使用以加载多个文件，或者使用通配符，例如`snmp*.yml`
 >
 > `--snmp.module-concurrency`参数可以在一次抓取中从多个模块中检索信息
 
@@ -89,7 +130,8 @@ User=prometheus
 Restart=on-failure
 Type=simple
 ExecStart=/usr/local/bin/snmp_exporter \\
-         --config.file /etc/snmp_exporter/snmp*.yaml \\
+         --config.file /etc/snmp_exporter/snmp*.yml \\
+         --web.config.file=/etc/snmp_exporter/web.yml \\
          --snmp.module-concurrency=3 \\
          --log.level=info 
 ExecReload=/bin/kill -HUP $MAINPID
@@ -109,7 +151,7 @@ systemctl status snmp_exporter
 
 ## **SNMP Exporter Generator**
 
-上面已经完成 **`SNMP Exporter`** 的部署，前面说了，手写 **`snmp.yaml`** 是非常不友好的。
+上面已经完成 **`SNMP Exporter`** 的部署，前面说了，手写 **`snmp.yml`** 是非常不友好的。
 
 故我们需要一款配置生成工具进行配置生成，只需要我们填写一些关键的信息即可得到我们想要的配置文件，比如想要采集交换机的指标。
 
@@ -225,22 +267,22 @@ export MIBDIRS=~/snmp_exporter/generator/mibs
 export MIBDIRS=~/CE_V200R023C00SPC500_MIB/MIBFile
 ```
 
-#### 生成 snmp.yaml
+#### 生成 snmp.yml
 
 ```bash
-# 生成最终snmp.yaml文件
-# 注意： generator.yaml 配置在下一章节介绍
+# 生成最终snmp.yml文件
+# 注意： generator.yml 配置在下一章节介绍
 ./generator --fail-on-parse-errors --snmp.mibopts=u generate  \
     -m ~/CE_V200R023C00SPC500_MIB/MIBFile  \
     -m ~/snmp_exporter/generate/mibs  \
-    -g /etc/snmp_exporter/generator.yaml  \
-    -o /etc/snmp_exporter/snmp.yaml
+    -g /etc/snmp_exporter/generator.yml  \
+    -o /etc/snmp_exporter/snmp.yml
 ```
 
- 将最终生成的snmp.yaml文件移动到snmp_exporter程序配置文件读取的路径
+ 将最终生成的snmp.yml文件移动到snmp_exporter程序配置文件读取的路径
 
 ```bash
-mv snmp.yaml /opt/snmp_exporter/
+mv snmp.yml /opt/snmp_exporter/
 ```
 
 重启 snmp_exporter
@@ -251,14 +293,14 @@ systemctl restart snmp_exporter
 
 **运行过程说明：**
 
-配置生成器从 **`generator.yaml`** 中读取简化的收集指令并把相应的配置写入 **`snmp.yaml`** 。 **`snmp_exporter`** 程序仅使用 **`snmp.yaml`** 文件从开启了 **`snmp`** 的设备收集数据。
+配置生成器从 **`generator.yml`** 中读取简化的收集指令并把相应的配置写入 **`snmp.yml`** 。 **`snmp_exporter`** 程序仅使用 **`snmp.yml`** 文件从开启了 **`snmp`** 的设备收集数据。
 
 **generator程序  `args`参数解析**:
 
 ```text
 # ./generator [<flags>] <command> [<args> ...]
 -m    # 生成配置 需要读取的mibs库文件目录 可同时指定多个
--g    # 生成配置 需要读取的生成器配置文件 generator.yaml
+-g    # 生成配置 需要读取的生成器配置文件 generator.yml
 -o    # 生成的配置保存路径和文件名
 ```
 
@@ -280,16 +322,16 @@ systemctl restart snmp_exporter
 ./generator --fail-on-parse-errors --snmp.mibopts=u generate \
     -m ~/huawei/mibs \
     -m ~/snmp_exporter/generate/mibs \
-    -g /etc/snmp_exporter/generator-huawei.yaml \
-    -o /etc/snmp_exporter/snmp-huawei.yaml
+    -g /etc/snmp_exporter/generator-huawei.yml \
+    -o /etc/snmp_exporter/snmp-huawei.yml
 ```
 
 ```bash
 ./generator --fail-on-parse-errors --snmp.mibopts=u generate \
     -m ~/huawei/mibs \
     -m ~/snmp_exporter/generate/mibs \
-    -g /etc/snmp_exporter/generator-h3c.yaml \
-    -o /etc/snmp_exporter/snmp-h3c.yaml
+    -g /etc/snmp_exporter/generator-h3c.yml \
+    -o /etc/snmp_exporter/snmp-h3c.yml
 ```
 
 **`--snmp.mibopts`** flag 的作用：
@@ -313,17 +355,17 @@ snmpwalk --help
 
 **mibs文件目录规划**
 
-建议**不同类型的设备**各自新建一个目录，其中包含不同设备类型的 **`mibs`** 目录、生成器可执行文件和 **`generator.yaml`** 配置文件。这是为了避免 **`MIB`** 定义中的名称空间冲突。仅在设备的 **`mibs`** 目录中保留所需的 **`MIB文件`** 。
+建议**不同类型的设备**各自新建一个目录，其中包含不同设备类型的 **`mibs`** 目录、生成器可执行文件和 **`generator.yml`** 配置文件。这是为了避免 **`MIB`** 定义中的名称空间冲突。仅在设备的 **`mibs`** 目录中保留所需的 **`MIB文件`** 。
 
 ### Generator 配置
 
-可以按照不同设备 或 不同模块，创建不同的`generator.yaml`文件
+可以按照不同设备 或 不同模块，创建不同的`generator.yml`文件
 
-`generator.yaml`的配置如下：
+`generator.yml`的配置如下：
 
 #### 采集系统基本信息
 
-`generator-comm.yaml`:
+`generator-comm.yml`:
 
 ```yaml
 auths:
@@ -345,7 +387,7 @@ modules:
 
 #### 采集接口信息 (if-mib)
 
-`generator-if-mib.yaml`:
+`generator-if-mib.yml`:
 
 ```yaml
 modules:
@@ -494,7 +536,7 @@ modules:
 
 #### 采集光模块、CPU、风扇等信息（HUAWEI）
 
-`generator-huawei-entity-extent-mib.yaml`:
+`generator-huawei-entity-extent-mib.yml`:
 
 ```yaml
 modules:
@@ -667,7 +709,7 @@ modules:
 
 #### 采集Flash存储信息 (HUAWEI)
 
-`generator-huawei-flash-man-mib.yaml`:
+`generator-huawei-flash-man-mib.yml`:
 
 ```yaml
 modules:
@@ -764,7 +806,7 @@ modules:
 
 #### 采集 MAC地址表 FdbTable
 
-`generator-bridge-mib.yaml`:
+`generator-bridge-mib.yml`:
 
 ```yaml
 ## 采集 MAC地址表 （FdbTable）
@@ -822,40 +864,40 @@ modules:
         ignore: true
 ```
 
-#### 重新生成 `snmp.yaml`
+#### 重新生成 `snmp.yml`
 
-`generator-*.yaml`文件修改完成之后，重新生成 `snmp-*.yaml`文件
+`generator-*.yml`文件修改完成之后，重新生成 `snmp-*.yml`文件
 
 ```bash
 ~/snmp_exporter/generator/generator --fail-on-parse-errors --snmp.mibopts=u generate  \
     -m ~/CE_V200R023C00SPC500_MIB/MIBFile  \
     -m ~/snmp_exporter/generate/mibs  \
-    -g /etc/snmp_exporter/generator/generator-comm.yaml  \
-    -o /etc/snmp_exporter/snmp-comm.yaml
+    -g /etc/snmp_exporter/generator/generator-comm.yml  \
+    -o /etc/snmp_exporter/snmp-comm.yml
 ```
 
 ```bash
 ~/snmp_exporter/generator/generator --fail-on-parse-errors --snmp.mibopts=u generate  \
     -m ~/CE_V200R023C00SPC500_MIB/MIBFile  \
     -m ~/snmp_exporter/generate/mibs  \
-    -g /etc/snmp_exporter/generator/generator-if-mib.yaml  \
-    -o /etc/snmp_exporter/snmp-if-mib.yaml
+    -g /etc/snmp_exporter/generator/generator-if-mib.yml  \
+    -o /etc/snmp_exporter/snmp-if-mib.yml
 ```
 
 ```bash
 ~/snmp_exporter/generator/generator --fail-on-parse-errors --snmp.mibopts=u generate  \
     -m ~/CE_V200R023C00SPC500_MIB/MIBFile  \
     -m ~/snmp_exporter/generate/mibs  \
-    -g /etc/snmp_exporter/generator/generator-huawei-entity-extent-mib.yaml  \
-    -o /etc/snmp_exporter/snmp-huawei-entity-extent-mib.yaml
+    -g /etc/snmp_exporter/generator/generator-huawei-entity-extent-mib.yml  \
+    -o /etc/snmp_exporter/snmp-huawei-entity-extent-mib.yml
 ```
 
 ```bash
 ~/snmp_exporter/generator/generator --fail-on-parse-errors --snmp.mibopts=u generate  \
     -m ~/CE_V200R023C00SPC500_MIB/MIBFile  \
     -m ~/snmp_exporter/generate/mibs  \
-    -g /etc/snmp_exporter/generator/generator-bridge-mib.yaml  \
-    -o /etc/snmp_exporter/snmp-bridge-mib.yaml
+    -g /etc/snmp_exporter/generator/generator-bridge-mib.yml  \
+    -o /etc/snmp_exporter/snmp-bridge-mib.yml
 ```
 
 然后重新启动 `snmp_exporter`
@@ -868,7 +910,7 @@ systemctl restart snmp_exporter.service
 
 ## Prometheus配置
 
-按照`generator.yaml`中定义的不同module，查分成多个job 。以便优化`snmp_exporter`的性能：
+按照`generator.yml`中定义的不同module，查分成多个job 。以便优化`snmp_exporter`的性能：
 
 - 配合 `--snmp.module-concurrency=3 `参数，提高并发性，可以在一次抓取中从多个模块中检索信息
 - 根据需要，每个module的采集周期可以设置不一样。例如 接口信息1分钟收集一次, 光模块信息5分钟收集一次
@@ -879,7 +921,7 @@ systemctl restart snmp_exporter.service
 
 举例：按照不同的采集频率来拆分job:
 
-新建 `/etc/prometheus/file_sd_config.d/snmp_1m-huawei.yaml`文件，对应Prometheus中的1分钟轮询 Job，添加需要收集snmp信息的设备
+新建 `/etc/prometheus/file_sd_config.d/snmp_1m-huawei.yml`文件，对应Prometheus中的1分钟轮询 Job，添加需要收集snmp信息的设备
 
 ```yaml
 # 1分钟轮询的模块, 注意`module` 参数中是使用逗号分隔的模块名称列表，不是数组
@@ -887,13 +929,13 @@ systemctl restart snmp_exporter.service
     auth: "public_v2"
     model: "CE8800"
     region: "BJ"
-    module: "if-mib,snmpv2-mib"      # 名称对应generator.yaml中的module名称
+    module: "if-mib,snmpv2-mib"      # 名称对应generator.yml中的module名称
   targets:
     - 192.168.1.1;BJ-Spine-CE8850    # 格式'<IP>;<HOSTNAME>'
     - 10.10.1.1;BJ-Leaf-CE6865
 ```
 
-新建 `/etc/prometheus/file_sd_config.d/snmp_5m-huawei.yaml`文件，对应Prometheus中的5分钟轮询 Job，添加需要收集snmp信息的设备
+新建 `/etc/prometheus/file_sd_config.d/snmp_5m-huawei.yml`文件，对应Prometheus中的5分钟轮询 Job，添加需要收集snmp信息的设备
 
 ```yaml
 # 5分钟轮询的模块,注意`module` 参数中是使用逗号分隔的模块名称列表，不是数组
@@ -915,7 +957,7 @@ scrape_configs:
     scrape_interval: 1m    # 1分钟轮询
     scrape_timeout: 1m
     file_sd_configs:
-      - files: ["/etc/prometheus/file_sd_config.d/snmp_1m*.yaml"]
+      - files: ["/etc/prometheus/file_sd_config.d/snmp_1m*.yml"]
         refresh_interval: 1m
     metrics_path: /snmp
     relabel_configs:
@@ -939,7 +981,7 @@ scrape_configs:
     scrape_interval: 5m    # 5分钟轮询
     scrape_timeout: 5m
     file_sd_configs:
-      - files: ["/etc/prometheus/file_sd_config.d/snmp_5m*.yaml"]
+      - files: ["/etc/prometheus/file_sd_config.d/snmp_5m*.yml"]
         refresh_interval: 1m
     metrics_path: /snmp
     relabel_configs:
