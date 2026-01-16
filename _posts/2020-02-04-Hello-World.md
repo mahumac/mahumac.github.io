@@ -123,7 +123,7 @@ comments:
 
 现在，可以使用以下方法来部署自己的 Jekyll 站点
 
-### 方法1. 使用 Github Actions 进行部署 (推荐)
+### 方法1. GitHub Pages (非本地部署，推荐)
 
 1）进入刚才创建的仓库 `settings` 页面，在左侧导航栏选择 `pages`。
 
@@ -135,7 +135,7 @@ comments:
 
 等待几分钟，Deployments 完成后就可以通过  GitHub 提供的 URL 进入自己的博客站点啦！
 
-### 方法2. 部署在自建服务器
+### 方法2. 部署在自建服务器（本地部署）
 
 对于自建服务器，需要在本地计算机上构建站点，然后将站点文件上传到服务器。
 
@@ -152,20 +152,29 @@ $ JEKYLL_ENV=production bundle exec jekyll b
 Chirpy的部分文件架构如下，了解这些将有助于后续的文件修改：
 
 ```tex
-/                (root根目录)
-├─ _data         (存储了部分网页配置)
-│   └─locales    (语言本地化)
-├─ _includes     (为不同功能预先写好的html模块，可以在使用时直接include)
-├─ _javascript
-├─ _layouts      (不同的layout预设以供页面选择)
-├─ _plugins
-├─ _posts        (文章存储的位置)
-├─ _sass         (CSS文件)
-├─ _tabs         (Chirpy创建的Collection，对应侧边栏的标签)
-├─ assets        (网页所需的素材)
-├─ _config.yml   (全局配置文件)
-└─ index.html
+<username>.github.io/    # (root目录)
+├── _config.yml          # (全局配置文件)
+├─- _data                # (存储了部分网页配置)
+│   └─locales            # (语言本地化)
+├── _posts/              # (Blog文章存储的位置)
+│   └── YYYY-MM-DD-my-first-post.md
+├── _layouts/            # (layout HTML模板)
+│   ├── default.html
+│   └── post.html
+├── _includes/           # (为不同功能预先写好的html模块，可以在使用时直接include)
+│   ├── header.html
+│   └── footer.html
+├─- _tabs                # (Chirpy创建的Collection，对应侧边栏的标签)
+├── assets/              # CSS, images, JS files
+│   ├── css/
+│   └── images/
+├── about.md             # Static pages
+└── index.html           # Homepage
 ```
+
+> ⚠️ **入门提示：**以`_` 开头的文件是特殊的 Jekyll 文件夹。`.md`文件会变成你网站上的页面。
+
+
 
 ## 写下第一篇文章
 
@@ -190,5 +199,6 @@ hello world!
 
 ## 升级站点
 
-参考：[Upgrade Guide · cotes2020/jekyll-theme-chirpy Wiki](https://github.com/cotes2020/jekyll-theme-chirpy/wiki/Upgrade-Guide)
+参考1：[Upgrade Guide · cotes2020/jekyll-theme-chirpy Wiki](https://github.com/cotes2020/jekyll-theme-chirpy/wiki/Upgrade-Guide)
+参考2：[杰基尔完整指南：从安装到GitHub页面博客 |Sagar Nikam 博客](https://sagarnikam123.github.io/posts/jekyll-github-pages-complete-installation-guide/)
 
