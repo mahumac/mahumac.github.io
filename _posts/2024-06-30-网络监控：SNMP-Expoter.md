@@ -929,7 +929,7 @@ systemctl restart snmp_exporter.service
     auth: "public_v2"
     model: "CE8800"
     region: "BJ"
-    module: "if-mib,snmpv2-mib"      # 名称对应generator.yml中的module名称
+    modules: "if-mib,snmpv2-mib"      # 名称对应generator.yml中的module名称
   targets:
     - 192.168.1.1;BJ-Spine-CE8850    # 格式'<IP>;<HOSTNAME>'
     - 10.10.1.1;BJ-Leaf-CE6865
@@ -943,7 +943,7 @@ systemctl restart snmp_exporter.service
     auth: "public_v2"
     model: "CE8800"
     region: "BJ"
-    module: "ip-mib,bridge-mib,huawei-entity-extent-mib,huawei-flash-man-mib"
+    modules: "ip-mib,bridge-mib,huawei-entity-extent-mib,huawei-flash-man-mib"
   targets:
     - 192.168.1.1;BJ-Spine-CE8850
     - 10.10.1.1;BJ-Leaf-CE6865
@@ -970,7 +970,7 @@ scrape_configs:
         regex: '.*;(.*)'                    # 提取target模板中的第2段，hostname
       - source_labels: [auth]
         target_label: __param_auth         # 将 标签'auth'的值传递给snmp_exporter
-      - source_labels: [module]
+      - source_labels: [modules]
         target_label: __param_module       # 将 标签'module'的值传递给snmp_exporter
       - target_label: __address__
         replacement: 127.0.0.19:9116       # snmp_exporter服务IP和端口
@@ -995,7 +995,7 @@ scrape_configs:
         target_label: instance
       - source_labels: [auth]
         target_label: __param_auth         # 将 标签'auth'的值传递给snmp_exporter
-      - source_labels: [module]
+      - source_labels: [modules]
         target_label: __param_module       # 将 标签'module'的值传递给snmp_exporter
       - target_label: __address__
         replacement: 127.0.0.1:9116        # snmp_exporter服务IP和端口
