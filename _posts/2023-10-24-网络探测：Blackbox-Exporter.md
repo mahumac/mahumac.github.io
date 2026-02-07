@@ -307,7 +307,9 @@ scrape_configs:
 
 ## 查询 ICMP Loss/RTT/Jitter
 
-### 使用PromQL 计算 ICMP 丢包
+Blackbox_exporter 一次只发送一个ping，要么成功，要么失败 (success = 1 , faile = 0)。但如果你有1秒的抓取间隔，那么1分钟内会发送60次ping  —— 这意味着你可以做类似 `Smokeping`的丢包和抖动测量。
+
+### 计算 ICMP 丢包
 
 * 通过metric   `probe_success`查询 icmp ping 是否成功 (success = 1 , faile = 0)
 
@@ -323,11 +325,11 @@ probe_success{job=~"blackbox_icmp.*"}
 
 
 
-###  使用PromQL 计算 ICMP RTT
+###  计算 ICMP RTT
 
 * 通过以下以下PromQL, 计算60秒内的 平均 icmp rtt 值。
 
-**注意：**如果出现 icmp 丢包，blackbox 会返回：
+**注意：**如果出现 icmp 丢包，blackbox 会返回以下metric：
 
 ```tex
 probe_success{} = 0                 # 其值为 0 说明探测失败，这个是预期的正确结果
@@ -359,17 +361,17 @@ avg_over_time(
     ( probe_icmp_duration_seconds{
          job=~"blackbox_icmp.*", phase="rtt"
       } > 0
-	) [$interval:1s]
+	) [60s:1s]
 )
 
 # 或者：
 sum_over_time(
     probe_icmp_duration_seconds{
         job=~"blackbox_icmp.*", phase="rtt"
-    } [$interval]
+    } [60s]
 ) 
 / ignoring(phase) 
-sum_over_time(probe_success{job=~"blackbox_icmp.*"}[$interval])
+sum_over_time(probe_success{job=~"blackbox_icmp.*"}[60s])
 ```
 
 ### 计算 ICMP Jitter
@@ -394,10 +396,30 @@ stddev_over_time(
 # 使用内部子查询（Subquery，1s精度）
 avg_over_time(
     abs(
-        probe_icmp_duration_seconds{job=~"blackbox_icmp.*", phase="rtt"} - probe_icmp_duration_seconds offset 1s
+        (probe_icmp_duration_seconds{job=~"blackbox_icmp.*", phase="rtt"} > 0)
+        - 
+        (probe_icmp_duration_seconds{job=~"blackbox_icmp.*", phase="rtt"} > 0) offset 1s
     )  [$interval:1s]
 ) > 0.015
 ```
+
+这个 PromQL 表达式非常接近 RFC 1889 / RFC 3550 中定义的 平均瞬时抖动 (Mean Interarrival Jitter)。
+通过 `offset 1s` 与当前值相减并取绝对值，实际上是在计算相邻2个探测包之间的延迟变化（Delay Variation）。
+
+**公式逻辑解析**:
+
+  - `probe_icmp_duration_second{} - probe_icmp_duration_seconds{} offset 1s` :  计算 两次探测之间的延迟差。
+  - `probe_icmp_duration_second > 0`:  是为了防止因为 `offset 1s` 恰好遇到探测失败（无数据）导致计算结果出现断点
+  - `abs(...)`:  抖动关注的是波动的幅度，而非方向（延迟增加或减少都算抖动）。
+  - `$interval:1s`:  在指定的时间窗口内，以 1 秒为分辨率重新采样这些差值。
+  - `avg_over_time(...)`:  计算这段时间内波动差的平均值，得出平滑后的抖动数值。
+
+**这比百分位数更能反应“抖动”**
+
+  - 百分位数 (P90) 反映的是延迟的**分布情况**（是否有长尾延迟）。
+  - 该公式 反映的是延迟的**变化频率**。
+    - 场景 A：延迟稳定在 100ms，P90 是 100ms，该计算公式结果趋近于 0（稳定）。
+    - 场景 B：延迟在 20ms 和 100ms 之间剧烈跳动，该计算公式能捕捉到这种不稳定性。
 
 
 
