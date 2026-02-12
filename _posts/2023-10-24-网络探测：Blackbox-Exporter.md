@@ -407,12 +407,12 @@ stddev_over_time(
   stddev_over_time(
     (
       probe_icmp_duration_seconds{job=~"blackbox_icmp.*", phase="rtt"} > 0
-    ) [$interval:1s])
+    ) [$interval:$__interval])
   /
   avg_over_time(
     (
       probe_icmp_duration_seconds{job=~"blackbox_icmp.*", phase="rtt"} > 0
-     ) [$interval:1s])
+     ) [$interval:$__interval])
   > 0.20
 )
 and
@@ -421,9 +421,27 @@ and
   stddev_over_time(
     (
       probe_icmp_duration_seconds{job=~"blackbox_icmp.*", phase="rtt"} > 0
-    ) [$interval:1s]) > 0.01
+    ) [$interval:$__interval]) > 0.01
 )
 ```
+
+> [!TIP]
+>
+> 建议聚合时间窗口用自定义 '$interval'，子查询分辨率用Grafana 的内置变量的 '$__interval'，解决子查询的性能问题，**减轻 Prometheus 计算压力**。
+>
+> 在 Grafana 面板上自定义 $__interval 的大小主要有以下两种方式，它们分别对应不同的场景
+>
+> grafana面板编辑页中设置： 
+>
+> - **Query options(查询选项)** -- **Min Interval (最小间隔) **，设置为 1s，即采集频率（prometheus抓取频率）
+>
+> - **Query options(查询选项)** -- **Max Data Points (最大数据点数)** ，设置为 1800，无论查看1小时 还是 1 天，横轴最多只会渲染1800个数据点，1k显示器的横向分辨率多为 1920 像素。
+>
+> 这样做的实际效果：
+>
+> - 看 1 小时数据：1800s / 1800 = 1s，$__interval 是 1s 。子查询精度最高，能看到每一个 ICMP 包带来的抖动。
+> - 看 2 小时数据：3600s / 1800 = 2s，$__interval 自动变为 2s。子查询精度为2秒，图表秒开。
+> - 看 24 小时数据：86400s / 1800 = 48s， $__interval 自动变为 48s。计算开销降低，曲线平滑，且能看到全天的整体网络质量趋势。
 
 
 
