@@ -376,50 +376,54 @@ sum_over_time(probe_success{job=~"blackbox_icmp.*"}[60s])
 
 ### 计算 ICMP Jitter
 
-使用`标准方差`，单位是 ‘平方秒’，没有实际意义，反映时间窗口内数据的 “波动幅度
+使用`方差`，单位是 ‘平方秒’，没有实际意义，反映时间窗口内数据的 “波动幅度
 
 ```bash
-# 计算 ICMP抖动 (标准方差，单位是 ‘平方秒’，没有实际意义，反映时间窗口内数据的 “波动幅度”)
+# 计算 ICMP抖动 (方差，单位是 ‘平方秒’，没有实际意义，反映时间窗口内数据的 “波动幅度”)
 # 排除probe_icmp_duration_seconds{}=0的情况, 使用内部子查询（Subquery，1s精度）
-stddev_over_time(
-	( probe_icmp_duration_seconds{
-    	job=~"blackbox_icmp.*", phase="rtt"
-      } > 0
-     ) [$interval:1s]
- ) > 0.015
+# # 计算 ICMP 延迟方差，阈值 10ms,其平方（方差）为 '0.01^2 = 0.0001'
+stdvar_over_time(
+  (
+    probe_icmp_duration_seconds{job=~"blackbox_icmp.*", phase="rtt"} > 0
+  ) [$interval:1s]
+) > 0.0001
 ```
 
-使用`平均差`，单位是 ‘秒’，反映时间窗口内数据的 “平均水平”
+使用`标准差`，单位是 ‘秒’，反映时间窗口内数据的 “平均水平”
 
 ```bash
-# 计算 ICMP抖动 (平均差，单位是 ‘秒’，反映时间窗口内数据的 “平均水平”)
-# 使用内部子查询（Subquery，1s精度）
-avg_over_time(
-    abs(
-        (probe_icmp_duration_seconds{job=~"blackbox_icmp.*", phase="rtt"} > 0)
-        - 
-        (probe_icmp_duration_seconds{job=~"blackbox_icmp.*", phase="rtt"} > 0) offset 1s
-    )  [$interval:1s]
-) > 0.015
+# 计算 ICMP抖动 (标准差，单位是 ‘秒’，反映时间窗口内数据的 “平均水平”)
+# 使用内部子查询（Subquery，1s精度）, 计算 RTT 标准差，阈值 10ms
+stddev_over_time(
+  (
+    probe_icmp_duration_seconds{job=~"blackbox_icmp.*", phase="rtt"} > 0
+  ) [${__interval}:1s]
+) > 0.010
 ```
 
-这个 PromQL 表达式非常接近 RFC 1889 / RFC 3550 中定义的 平均瞬时抖动 (Mean Interarrival Jitter)。
-通过 `offset 1s` 与当前值相减并取绝对值，实际上是在计算相邻2个探测包之间的延迟变化（Delay Variation）。
-
-**公式逻辑解析**:
-
-  - `probe_icmp_duration_second{} - probe_icmp_duration_seconds{} offset 1s` :  计算 两次探测之间的延迟差。
-  - `probe_icmp_duration_second > 0`:  是为了防止因为 `offset 1s` 恰好遇到探测失败（无数据）导致计算结果出现断点
-  - `abs(...)`:  抖动关注的是波动的幅度，而非方向（延迟增加或减少都算抖动）。
-  - `$interval:1s`:  在指定的时间窗口内，以 1 秒为分辨率重新采样这些差值。
-  - `avg_over_time(...)`:  计算这段时间内波动差的平均值，得出平滑后的抖动数值。
-
-**这比百分位数更能反应“抖动”**
-
-  - 百分位数 (P90) 反映的是延迟的**分布情况**（是否有长尾延迟）。
-  - 该公式 反映的是延迟的**变化频率**。
-    - 场景 A：延迟稳定在 100ms，P90 是 100ms，该计算公式结果趋近于 0（稳定）。
-    - 场景 B：延迟在 20ms 和 100ms 之间剧烈跳动，该计算公式能捕捉到这种不稳定性。
+```bash
+(
+  # 条件1：相对波动 (CV) > 20%, 反映延迟相对于自身基准的波动程度
+  stddev_over_time(
+    (
+      probe_icmp_duration_seconds{job=~"blackbox_icmp.*", phase="rtt"} > 0
+    ) [$interval:1s])
+  /
+  avg_over_time(
+    (
+      probe_icmp_duration_seconds{job=~"blackbox_icmp.*", phase="rtt"} > 0
+     ) [$interval:1s])
+  > 0.20
+)
+and
+(
+  # 条件2：绝对抖动 > 10ms (过滤高质量链路的微小波动)
+  stddev_over_time(
+    (
+      probe_icmp_duration_seconds{job=~"blackbox_icmp.*", phase="rtt"} > 0
+    ) [$interval:1s]) > 0.01
+)
+```
 
 
 
