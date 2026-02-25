@@ -397,7 +397,7 @@ stdvar_over_time(
 stddev_over_time(
   (
     probe_icmp_duration_seconds{job=~"blackbox_icmp.*", phase="rtt"} > 0
-  ) [${__interval}:1s]
+  ) [$interval:1s]
 ) > 0.010
 ```
 
@@ -427,7 +427,7 @@ and
 
 > [!TIP]
 >
-> 建议聚合时间窗口用自定义 '$interval'，子查询分辨率用Grafana 的内置变量的 '$__interval'，解决子查询的性能问题，**减轻 Prometheus 计算压力**。
+> 建议聚合时间窗口用自定义 `$interval`，子查询分辨率用Grafana 的内置变量的 `$__interval`，解决子查询的性能问题，**减轻 Prometheus 计算压力**。
 >
 > 在 Grafana 面板上自定义 $__interval 的大小主要有以下两种方式，它们分别对应不同的场景
 >
