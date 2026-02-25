@@ -1,6 +1,7 @@
 ---
 title: 网络探测：Blackbox Exporter
 date: 2023-10-24 +0800
+last_modified_at: 2026-02-13 +0800
 categories: [Prometheus, Blackbox]
 pin: false
 math: true
