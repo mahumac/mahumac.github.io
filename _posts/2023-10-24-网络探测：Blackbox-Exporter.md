@@ -1,6 +1,7 @@
 ---
 title: 网络探测：Blackbox Exporter
 date: 2023-10-24 +0800
+last_modified_at: 2026-02-13 +0800
 categories: [Prometheus, Blackbox]
 pin: false
 math: true
@@ -307,7 +308,9 @@ scrape_configs:
 
 ## 查询 ICMP Loss/RTT/Jitter
 
-### 使用PromQL 计算 ICMP 丢包
+Blackbox_exporter 一次只发送一个ping，要么成功，要么失败 (success = 1 , faile = 0)。但如果你有1秒的抓取间隔，那么1分钟内会发送60次ping  —— 这意味着你可以做类似 `Smokeping`的丢包和抖动测量。
+
+### 计算 ICMP 丢包
 
 * 通过metric   `probe_success`查询 icmp ping 是否成功 (success = 1 , faile = 0)
 
@@ -323,11 +326,11 @@ probe_success{job=~"blackbox_icmp.*"}
 
 
 
-###  使用PromQL 计算 ICMP RTT
+###  计算 ICMP RTT
 
 * 通过以下以下PromQL, 计算60秒内的 平均 icmp rtt 值。
 
-**注意：**如果出现 icmp 丢包，blackbox 会返回：
+**注意：**如果出现 icmp 丢包，blackbox 会返回以下metric：
 
 ```tex
 probe_success{} = 0                 # 其值为 0 说明探测失败，这个是预期的正确结果
@@ -359,45 +362,87 @@ avg_over_time(
     ( probe_icmp_duration_seconds{
          job=~"blackbox_icmp.*", phase="rtt"
       } > 0
-	) [$interval:1s]
+	) [60s:1s]
 )
 
 # 或者：
 sum_over_time(
     probe_icmp_duration_seconds{
         job=~"blackbox_icmp.*", phase="rtt"
-    } [$interval]
+    } [60s]
 ) 
 / ignoring(phase) 
-sum_over_time(probe_success{job=~"blackbox_icmp.*"}[$interval])
+sum_over_time(probe_success{job=~"blackbox_icmp.*"}[60s])
 ```
 
 ### 计算 ICMP Jitter
 
-使用`标准方差`，单位是 ‘平方秒’，没有实际意义，反映时间窗口内数据的 “波动幅度
+使用`方差`，单位是 ‘平方秒’，没有实际意义，反映时间窗口内数据的 “波动幅度
 
 ```bash
-# 计算 ICMP抖动 (标准方差，单位是 ‘平方秒’，没有实际意义，反映时间窗口内数据的 “波动幅度”)
+# 计算 ICMP抖动 (方差，单位是 ‘平方秒’，没有实际意义，反映时间窗口内数据的 “波动幅度”)
 # 排除probe_icmp_duration_seconds{}=0的情况, 使用内部子查询（Subquery，1s精度）
-stddev_over_time(
-	( probe_icmp_duration_seconds{
-    	job=~"blackbox_icmp.*", phase="rtt"
-      } > 0
-     ) [$interval:1s]
- ) > 0.015
+# # 计算 ICMP 延迟方差，阈值 10ms,其平方（方差）为 '0.01^2 = 0.0001'
+stdvar_over_time(
+  (
+    probe_icmp_duration_seconds{job=~"blackbox_icmp.*", phase="rtt"} > 0
+  ) [$interval:1s]
+) > 0.0001
 ```
 
-使用`平均差`，单位是 ‘秒’，反映时间窗口内数据的 “平均水平”
+使用`标准差`，单位是 ‘秒’，反映时间窗口内数据的 “平均水平”
 
 ```bash
-# 计算 ICMP抖动 (平均差，单位是 ‘秒’，反映时间窗口内数据的 “平均水平”)
-# 使用内部子查询（Subquery，1s精度）
-avg_over_time(
-    abs(
-        probe_icmp_duration_seconds{job=~"blackbox_icmp.*", phase="rtt"} - probe_icmp_duration_seconds offset 1s
-    )  [$interval:1s]
-) > 0.015
+# 计算 ICMP抖动 (标准差，单位是 ‘秒’，反映时间窗口内数据的 “平均水平”)
+# 使用内部子查询（Subquery，1s精度）, 计算 RTT 标准差，阈值 10ms
+stddev_over_time(
+  (
+    probe_icmp_duration_seconds{job=~"blackbox_icmp.*", phase="rtt"} > 0
+  ) [$interval:1s]
+) > 0.010
 ```
+
+```bash
+(
+  # 条件1：相对波动 (CV) > 20%, 反映延迟相对于自身基准的波动程度
+  stddev_over_time(
+    (
+      probe_icmp_duration_seconds{job=~"blackbox_icmp.*", phase="rtt"} > 0
+    ) [$interval:$__interval])
+  /
+  avg_over_time(
+    (
+      probe_icmp_duration_seconds{job=~"blackbox_icmp.*", phase="rtt"} > 0
+     ) [$interval:$__interval])
+  > 0.20
+)
+and
+(
+  # 条件2：绝对抖动 > 10ms (过滤高质量链路的微小波动)
+  stddev_over_time(
+    (
+      probe_icmp_duration_seconds{job=~"blackbox_icmp.*", phase="rtt"} > 0
+    ) [$interval:$__interval]) > 0.01
+)
+```
+
+> [!TIP]
+>
+> 建议聚合时间窗口用自定义 `$interval`，子查询分辨率用Grafana 的内置变量的 `$__interval`，解决子查询的性能问题，**减轻 Prometheus 计算压力**。
+>
+> 在 Grafana 面板上自定义 $__interval 的大小主要有以下两种方式，它们分别对应不同的场景
+>
+> grafana面板编辑页中设置： 
+>
+> - **Query options(查询选项)** -- **Min Interval (最小间隔) **，设置为 1s，即采集频率（prometheus抓取频率）
+>
+> - **Query options(查询选项)** -- **Max Data Points (最大数据点数)** ，设置为 1800，无论查看1小时 还是 1 天，横轴最多只会渲染1800个数据点，1k显示器的横向分辨率多为 1920 像素。
+>
+> 这样做的实际效果：
+>
+> - 看 1 小时数据：1800s / 1800 = 1s，$__interval 是 1s 。子查询精度最高，能看到每一个 ICMP 包带来的抖动。
+> - 看 2 小时数据：3600s / 1800 = 2s，$__interval 自动变为 2s。子查询精度为2秒，图表秒开。
+> - 看 24 小时数据：86400s / 1800 = 48s， $__interval 自动变为 48s。计算开销降低，曲线平滑，且能看到全天的整体网络质量趋势。
 
 
 
