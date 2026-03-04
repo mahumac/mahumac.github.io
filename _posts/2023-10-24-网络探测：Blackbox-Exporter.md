@@ -328,7 +328,7 @@ probe_success{job=~"blackbox_icmp.*"}
 
 ###  计算 ICMP RTT
 
-* 通过以下以下PromQL, 计算60秒内的 平均 icmp rtt 值。
+* 通过以下以下PromQL, 计算60秒内的 平均/P50 icmp rtt 值。
 
 **注意：**如果出现 icmp 丢包，blackbox 会返回以下metric：
 
@@ -354,26 +354,27 @@ $$
 $$
 需要排除 `probe_icmp_duration_seconds{} = 0` 的 情况。
 
-应该使用以下PromQL 公式：
+**平均延迟：**
 
 ```bash
 # 排除probe_icmp_duration_seconds{}=0的情况, 使用内部子查询（Subquery，1s精度）
 avg_over_time(
-    ( probe_icmp_duration_seconds{
-         job=~"blackbox_icmp.*", phase="rtt"
-      } > 0
-	) [60s:1s]
+  (probe_icmp_duration_seconds{job=~"blackbox_icmp.*", phase="rtt"} > 0)[60s:1s]
 )
-
-# 或者：
-sum_over_time(
-    probe_icmp_duration_seconds{
-        job=~"blackbox_icmp.*", phase="rtt"
-    } [60s]
-) 
-/ ignoring(phase) 
-sum_over_time(probe_success{job=~"blackbox_icmp.*"}[60s])
 ```
+
+容易受到极个别“长尾延迟”（抖动）的影响。 如果有一次探测是 100ms，其他是 10ms，平均值会被显著拉高。
+
+**中位数延迟 （P50 / 中位延迟）：**
+
+```
+# 
+quantile_over_time(0.5,
+  (probe_icmp_duration_seconds{job=~"blackbox_icmp.*", phase="rtt"} > 0)[60s:1s]
+)
+```
+
+对极端抖动不敏感。 即便有几次探测延迟很高，只要 50% 以上的包是稳定的，中位数就非常稳。
 
 ### 计算 ICMP Jitter
 
