@@ -10,7 +10,7 @@ tags: [Prometheus, Smokeping]
 
 ### Smokeping 的局限
 
-- **架构封闭**：Smokeping 是一个独立的、专用的工具，其数据存储在 RRD 中，难以与其他监控数据（如服务器负载、业务吞吐量）进行关联分析。
+- **架构封闭**：Smokeping 是一个独立的、专用的工具，其数据存储在 RRD 中，难以与其他监控数据（如服务器负载、业务吞吐量）进行关联分析（数据孤岛）。
 - **难以扩展**：Smokeping也支持Master-Slave架构（支持分布式），当设备节点的大量增加，导致维护 Smokeping 的 `config` 文件变得非常吃力。
 - **告警能力弱**：Smokeping 的告警配置相对刻板，而 Prometheus 的 **Alertmanager** 可以处理更复杂的告警逻辑（如抑制、分组、静默）。
 
