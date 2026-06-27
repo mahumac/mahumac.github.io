@@ -1,3 +1,4 @@
+---
 title: 网络探测：使用 Prometheus 替代 Smokeping
 date: 2023-11-07 +0800
 last_modified_at: 2025-02-13 +0800
@@ -5,6 +6,9 @@ categories: [Prometheus, Smokeping]
 pin: false
 math: true
 tags: [Prometheus, Smokeping] 
+---
+
+
 
 # 使用 Prometheus 替代 Smokeping
 
