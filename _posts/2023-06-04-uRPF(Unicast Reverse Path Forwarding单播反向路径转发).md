@@ -2,7 +2,7 @@
 title: uRPF(Unicast Reverse Path Forwarding)单播反向路径转发
 date: 2023-11-24 +0800
 last_modified_at: 2025-10-13 +0800
-categories: [uRPF]
+categories: [网络]
 pin: false
 math: true
 tags: [网络, uRPF] 
